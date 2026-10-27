@@ -1,3 +1,7 @@
+El usuario puede ver los productos sin compromiso en la tienda. Para poder poner una orden de compra debe identificarse primero, lo que crearía un cliente en nuestro libro. Esta orden pasa a Facturación, donde se recibe y se cobra. Luego pasa a otro departamento para despacho, que no evaluaremos en el alcance.
+
+La moneda del sistema será DOP.
+
 Analisis de actores
 ---
 
@@ -17,3 +21,53 @@ Analisis de actores
 - La comunicación entre los microservicios visibles por agentes externos debe estar asegurada por TLS.
 - Mantener el desarrollo en un sistema de control de versiones (como git).
 Subir el proyecto a un repositorio online (como github).
+
+Se trata de tener responsabilidades bien limitadas para poder manejar de manera más limpia la operación y que cada servicio solo acceda a los datos que necesita para ejecutar.
+
+Auth
+
+
+Debe manejar credenciales y roles en el sistema.
+
+
+- Registro e inicio de sesión.
+- Emisión de tokens JWT firmados.
+- Validación de identidad y permisos.
+- Manejo de usuarios activos y registros pendientes.
+- Los roles estarán fijos; no se evaluará su administración en el alcance del proyecto.
+
+Clientes
+
+
+Maneja los perfiles de los clientes.
+
+
+- Guarda la identificación y los datos del perfil.
+- Cada perfil está asociado a un user_id.
+- Solo puede existir un perfil de cliente para un mismo user_id.
+
+Productos
+
+
+Maneja los productos.
+
+
+- Catálogo y precios.
+- Operaciones administrativas sobre productos.
+- Consulta pública sin autenticación.
+
+Facturación
+
+
+Maneja órdenes y cuentas de clientes modificando sus balances.
+
+- Recepción y procesamiento de órdenes.
+- Cuentas identificadas por el ID del cliente.
+- Balance de cada cuenta.
+- Movimientos asociados al balance.
+- Solicitudes de depósito y su aprobación o rechazo.
+- Publicación y consumo de mensajes de Kafka.
+
+Inicialmente consideré que Órdenes fuera un servicio aparte. Decidí mantener recepción y procesamiento de órdenes junto con el balance y los movimientos, porque estas operaciones deben confirmarse juntas y no identifiqué un beneficio suficiente que justificara separarlas.
+
+
