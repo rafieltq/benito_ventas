@@ -1,0 +1,57 @@
+  services:
+     traefik:
+       image: traefik:v3.7.16
+       command:
+         - "--providers.docker=true"
+         - "--providers.docker.exposedbydefault=false"
+         - "--providers.docker.constraints=Label(`com.docker.compose.project`, `${COMPOSE_PROJECT_NAME}`)"
+         - "--entrypoints.web.address=:80"
+         - "--ping=true"
+       ports:
+         - "127.0.0.1:80:80"
+       volumes:
+         - /var/run/docker.sock:/var/run/docker.sock:ro
+       healthcheck:
+         test: ["CMD", "traefik", "healthcheck", "--ping"]
+         interval: 10s
+         timeout: 5s
+         retries: 3
+         start_period: 5s
+
+     productos-mongo:
+       image: mongo:8.0
+       volumes:
+         - productos_mongo_data:/data/db
+         - productos_mongo_config:/data/configdb
+       healthcheck:
+         test:
+           - CMD
+           - mongosh
+           - --quiet
+           - --eval
+           - "quit(db.adminCommand('ping').ok ? 0 : 1)"
+         interval: 5s
+         timeout: 5s
+         retries: 10
+         start_period: 10s
+
+     productos:
+       build:
+         context: ./productos
+         dockerfile: src/main/docker/Dockerfile.jvm
+       labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.productos.rule=Host(`benito.localhost`) && (Path(`/productos`) || PathPrefix(`/productos/`))"
+         - "traefik.http.routers.productos.entrypoints=web"
+         - "traefik.http.routers.productos.service=productos"
+         - "traefik.http.services.productos.loadbalancer.server.port=8080"
+       environment:
+         QUARKUS_MONGODB_CONNECTION_STRING: mongodb://productos-mongo:27017
+         QUARKUS_MONGODB_DATABASE: productos
+       depends_on:
+         productos-mongo:
+           condition: service_healthy
+
+  volumes:
+    productos_mongo_data:
+    productos_mongo_config:
