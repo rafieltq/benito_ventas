@@ -1,28 +1,53 @@
   services:
      traefik:
-       image: traefik:v3.7.16
-       command:
-         - "--providers.docker=true"
-         - "--providers.docker.exposedbydefault=false"
-         - "--providers.docker.constraints=Label(`com.docker.compose.project`, `${COMPOSE_PROJECT_NAME}`)"
-         - "--entrypoints.web.address=:80"
-         - "--ping=true"
-       ports:
-         - "127.0.0.1:80:80"
-       volumes:
-         - /var/run/docker.sock:/var/run/docker.sock:ro
-       healthcheck:
-         test: ["CMD", "traefik", "healthcheck", "--ping"]
-         interval: 10s
-         timeout: 5s
-         retries: 3
-         start_period: 5s
+      image: traefik:v3.7
+      container_name: traefik
+      restart: unless-stopped
+      security_opt:
+        - no-new-privileges:true
+      networks:
+        - proxy
+      ports:
+        - "80:80"
+        - "443:443"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ${HOME}/certs/traefik:/certs:ro
+        - ./infra/traefik/dynamic:/dynamic:ro
+      command:
+        - "--entrypoints.web.address=:80"
+        - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+        - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+        - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+        - "--entrypoints.websecure.address=:443"
+        - "--entrypoints.websecure.http.tls=true"
+        - "--providers.file.filename=/dynamic/tls.yaml"
+        - "--providers.docker=true"
+        - "--providers.docker.exposedbydefault=false"
+        - "--providers.docker.network=proxy"
+        - "--api.dashboard=true"
+        - "--api.insecure=false"
+        - "--log.level=INFO"
+        - "--accesslog=true"
+        - "--metrics.prometheus=true"
+        - "--providers.docker.constraints=Label(`com.benitoventas.proxy`, `true`)"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`dashboard.docker.localhost`)"
+        - "traefik.http.routers.dashboard.entrypoints=websecure"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.routers.dashboard.tls=true"
+        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$nWrMzXr9$$Olmxu4gxTFWqmMFC78MhM1"
+        - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+        - "com.benitoventas.proxy=true"
 
      productos-mongo:
        image: mongo:8.0
        volumes:
          - productos_mongo_data:/data/db
          - productos_mongo_config:/data/configdb
+       networks:
+         - proxy
        healthcheck:
          test:
            - CMD
@@ -39,19 +64,31 @@
        build:
          context: ./productos
          dockerfile: src/main/docker/Dockerfile.jvm
+       networks:
+         - proxy
        labels:
          - "traefik.enable=true"
-         - "traefik.http.routers.productos.rule=Host(`benito.localhost`) && (Path(`/productos`) || PathPrefix(`/productos/`))"
-         - "traefik.http.routers.productos.entrypoints=web"
+         - "traefik.http.routers.productos.rule=Host(`productos.benito.localhost`)"
+         - "traefik.http.routers.productos.entrypoints=websecure"
+         - "traefik.http.routers.productos.tls=true"
+         - "com.benitoventas.proxy=true"
          - "traefik.http.routers.productos.service=productos"
-         - "traefik.http.services.productos.loadbalancer.server.port=8080"
+         - "traefik.http.services.productos.loadbalancer.server.port=8443"
+         - "traefik.http.services.productos.loadbalancer.server.scheme=https"
+         - "traefik.http.services.productos.loadbalancer.serverstransport=productos-mtls@file"
        environment:
          QUARKUS_MONGODB_CONNECTION_STRING: mongodb://productos-mongo:27017
          QUARKUS_MONGODB_DATABASE: productos
        depends_on:
          productos-mongo:
            condition: service_healthy
+       volumes:
+          - ${HOME}/certs/productos:/certs:ro
 
   volumes:
     productos_mongo_data:
     productos_mongo_config:
+
+  networks:
+    proxy:
+      external: true

@@ -1,0 +1,15 @@
+tls:
+  certificates:
+    - certFile: /certs/local.crt
+      keyFile: /certs/local.key
+
+http:
+  serversTransports:
+    productos-mtls:
+      serverName: productos
+      rootCAs:
+        - /certs/ca.crt
+      certificates:
+        - certFile: /certs/client.crt
+          keyFile: /certs/client.key
+
