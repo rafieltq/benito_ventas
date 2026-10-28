@@ -7,6 +7,13 @@ tls:
 
 http:
   serversTransports:
+    facturacion-mtls:
+      serverName: facturacion
+      rootCAs:
+        - /certs/ca.crt
+      certificates:
+        - certFile: /certs/facturacion.crt
+          keyFile: /certs/facturacion.key
     clientes-mtls:
       serverName: clientes
       rootCAs:
