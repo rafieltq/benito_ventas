@@ -18,12 +18,26 @@ Desde la raíz del repositorio:
 docker compose up --build -d
 ```
 
+Servicio Auth
+---
+`auth` se publica en `https://auth.benito.localhost` mediante Traefik y mTLS interno, igual que Productos. `auth-mongodb` usa MongoDB 8.0 independiente, base `auth`, volúmenes persistentes y un healthcheck de ping. Auth espera a que MongoDB esté saludable. Ninguno publica puertos directamente en el host.
+
+Antes de levantar Auth:
+1. Preparar los certificados de Auth y actualizar el certificado público de Traefik según las instrucciones siguientes. Si ya existe, regenerarlo incluyendo `auth.benito.localhost` en sus SAN y actualizar la confianza en el cliente.
+2. Desde `auth/`, ejecutar `./mvnw package` para generar `target/quarkus-app`, que utiliza el Dockerfile JVM. Resolver primero cualquier error de compilación del código de Auth.
+3. Desde la raíz, ejecutar `docker compose up --build -d auth-mongodb auth traefik`.
+
+La configuración TLS de Auth aplica al perfil `prod` del servicio empaquetado; no cambia el modo de desarrollo. Los certificados se montan desde `~/certs/auth`, con acceso de lectura para el UID 185 del contenedor.
+
+**Sólo desarrollo local:** MongoDB no tiene autenticación y comparte la red `proxy`, como Productos. Otros contenedores conectados a esa red pueden acceder a la base. No utilizar esta configuración en producción sin autenticación y aislamiento de red. No se configura replica set: las transacciones multidocumento y el rollback de signup quedan pendientes.
+
 TLS/mTLS
 ---
 
 ```markdown
 
 Cliente ── TLS ──→ Traefik ── mTLS ──→ Productos:8443
+                          └─ mTLS ──→ Auth:8443
 ```
 TLS cifra la comunicación entre el cliente y Traefik como gateway. El cliente verifica el certificado de servidor de Traefik; en este entorno local se configura explícitamente la confianza en su certificado autofirmado. En la comunicación interna, Traefik verifica el certificado de servidor de Productos y presenta su certificado cliente, que Productos también verifica. Ambos certificados internos están firmados por nuestra CA privada.
 
@@ -31,11 +45,12 @@ TLS cifra la comunicación entre el cliente y Traefik como gateway. El cliente v
 - compose.yml: red, montajes y labels de enrutamiento.
 - infra/traefik/dynamic/tls.yaml: certificado público y ServersTransport.
 - productos/src/main/resources/application.properties: HTTPS y certificado cliente obligatorio.
+- auth/src/main/resources/application.properties: HTTPS y certificado cliente obligatorio en el perfil `prod`.
 
 ## Generación de certificados
 ### Preparar el directorio fuera del repositorio para almacenar los certificados y claves privadas
 ```bash
-mkdir -p ~/certs/{ca,traefik,productos}
+mkdir -p ~/certs/{ca,traefik,productos,auth}
 cd ~/certs
 ```
 
@@ -59,7 +74,7 @@ openssl req -x509 -newkey rsa:2048 -noenc -sha256 -days 365 \
   -addext "basicConstraints=critical,CA:FALSE" \
   -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
   -addext "extendedKeyUsage=serverAuth" \
-  -addext "subjectAltName=DNS:productos.benito.localhost,DNS:dashboard.docker.localhost"
+  -addext "subjectAltName=DNS:productos.benito.localhost,DNS:auth.benito.localhost,DNS:dashboard.docker.localhost"
 
 chmod 600 traefik/local.key
 ```
@@ -91,6 +106,35 @@ openssl x509 -req \
 ```bash
 cp ca/ca.crt productos/ca.crt
 chmod 600 productos/server.key
+```
+
+### Auth: server.crt, server.key y ca.crt.
+Usa la misma CA interna y verifica el certificado cliente de Traefik. Desde `~/certs`:
+```bash
+mkdir -p ~/certs/auth
+cd ~/certs
+
+openssl req -new -newkey rsa:2048 -noenc \
+  -keyout auth/server.key \
+  -out auth/server.csr \
+  -subj "/CN=auth"
+
+openssl x509 -req \
+  -in auth/server.csr \
+  -CA ca/ca.crt \
+  -CAkey ca/ca.key \
+  -CAcreateserial \
+  -out auth/server.crt \
+  -days 365 -sha256 \
+  -extfile <(printf '%s\n' \
+    'basicConstraints=critical,CA:FALSE' \
+    'keyUsage=critical,digitalSignature,keyEncipherment' \
+    'extendedKeyUsage=serverAuth' \
+    'subjectAltName=DNS:auth')
+
+cp ca/ca.crt auth/ca.crt
+chmod 600 auth/server.key
+setfacl -m u:185:r auth/server.key
 ```
 
 ### Traefik, cliente interno: client.crt, client.key y ca.crt.
