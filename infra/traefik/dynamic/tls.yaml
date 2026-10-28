@@ -5,6 +5,13 @@ tls:
 
 http:
   serversTransports:
+    auth-mtls:
+      serverName: auth
+      rootCAs:
+        - /certs/ca.crt
+      certificates:
+        - certFile: /certs/client.crt
+          keyFile: /certs/client.key
     productos-mtls:
       serverName: productos
       rootCAs:
