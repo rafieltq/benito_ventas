@@ -1,8 +1,10 @@
 Analisis prelimiar del proyecto
 ---
-El usuario puede ver los productos sin compromiso en la tienda. Para poder poner una orden de compra debe identificarse primero, lo que crearía un cliente en nuestro libro. Esta orden pasa a Facturación, donde se recibe y se cobra. Luego pasa a otro departamento para despacho, que no evaluaremos en el alcance.
+El cliente mira la lista de productos (GET /productos), El cliente selecciona productos especificando cantidades y coloca una orden de compra (POST orders/place-order/).
 
-La moneda del sistema será DOP.
+Voy a asumir que si el cliente tiene saldo disponible la orden se paga de manera automática descontando balance de su cuenta y recibe una actualización de estado. De no haber balance disponible se coloca la orden como pendiente de pago.
+
+El usuario puede ver los productos sin compromiso en la tienda. Para poder poner una orden de compra debe identificarse primero, lo que crearía un cliente en la base de datos. Esta orden pasa a Facturación, donde se recibe y se cobra.
 
 # Analisis de actores
 
@@ -25,11 +27,10 @@ Subir el proyecto a un repositorio online (como github).
 
 Se trata de tener responsabilidades bien limitadas para poder manejar de manera más limpia la operación y que cada servicio solo acceda a los datos que necesita para ejecutar.
 
+Lo delicado será definir cómo evitar compras duplicadas, cobros repetidos y balances inconsistentes cuando se procesen los mensajes. El documento deja reglas abiertas intencionalmente y también evaluará tus decisiones.
+
 Auth
-
-
 Debe manejar credenciales y roles en el sistema.
-
 
 - Registro e inicio de sesión.
 - Emisión de tokens JWT firmados.
@@ -39,29 +40,20 @@ Debe manejar credenciales y roles en el sistema.
 
 Clientes
 
-
 Maneja los perfiles de los clientes.
-
 
 - Guarda la identificación y los datos del perfil.
 - Cada perfil está asociado a un user_id.
 - Solo puede existir un perfil de cliente para un mismo user_id.
 
 Productos
-
-
 Maneja los productos.
-
-
 - Catálogo y precios.
 - Operaciones administrativas sobre productos.
 - Consulta pública sin autenticación.
 
 Facturación
-
-
-Maneja órdenes y cuentas de clientes modificando sus balances.
-
+Maneja órdenes y cuentas de clientes y depositos modificando sus balances.
 - Recepción y procesamiento de órdenes.
 - Cuentas identificadas por el ID del cliente.
 - Balance de cada cuenta.
