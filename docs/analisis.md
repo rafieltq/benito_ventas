@@ -1,9 +1,10 @@
+Analisis prelimiar del proyecto
+---
 El usuario puede ver los productos sin compromiso en la tienda. Para poder poner una orden de compra debe identificarse primero, lo que crearía un cliente en nuestro libro. Esta orden pasa a Facturación, donde se recibe y se cobra. Luego pasa a otro departamento para despacho, que no evaluaremos en el alcance.
 
 La moneda del sistema será DOP.
 
-Analisis de actores
----
+# Analisis de actores
 
 | Actor                  | Acciones                                           |
 |------------------------|---------------------------------------------------|
@@ -70,4 +71,13 @@ Maneja órdenes y cuentas de clientes modificando sus balances.
 
 Inicialmente consideré que Órdenes fuera un servicio aparte. Decidí mantener recepción y procesamiento de órdenes junto con el balance y los movimientos, porque estas operaciones deben confirmarse juntas y no identifiqué un beneficio suficiente que justificara separarlas.
 
+## Validación de identidad y autorización
+
+El requisito de TLS y mTLS protege el canal de comunicación. Adicionalmente, mTLS permite autenticar a los componentes que se comunican.
+
+Para transportar la identidad del usuario y sus roles utilizaré un JWT firmado, por ser un formato compacto cuya integridad y origen pueden verificarse. El token no sustituye la comprobación de permisos ni de propiedad sobre los recursos.
+
+Dentro del diseño usaré ForwardAuth en el gateway para delegar en Auth la validación inicial del usuario, antes de reenviar peticiones protegidas. Los servicios mantienen la validación del JWT, los permisos por rol y la comprobación de propiedad de los recursos. Las comunicaciones internas utilizan mTLS.
+
+Acepto una consulta adicional y la dependencia de Auth por cada petición protegida. Si la validación no puede completarse, no se permite ejecutar la operación. Los endpoints públicos de registro, login y consulta del catálogo quedan fuera de ForwardAuth.
 
