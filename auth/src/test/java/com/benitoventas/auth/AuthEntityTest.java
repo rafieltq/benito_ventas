@@ -33,7 +33,7 @@ class AuthEntityTest {
     void userProfileAndRoleReferencesRoundTripThroughBson() {
         User user = new User();
         user.id = new ObjectId();
-        user.nombre = "María Pérez";
+        user.name = "María Pérez";
         user.email = "maria@example.test";
         user.phone = "+5215550100100";
         user.roleIds.add(new ObjectId());
@@ -43,7 +43,7 @@ class AuthEntityTest {
         User restored = decode(document, User.class);
 
         assertEquals(user.id, restored.id);
-        assertEquals(user.nombre, restored.nombre);
+        assertEquals(user.name, restored.name);
         assertEquals(user.email, restored.email);
         assertEquals(user.phone, restored.phone);
         assertEquals(user.roleIds, restored.roleIds);

@@ -1,160 +1,284 @@
 package com.benitoventas.auth;
 
-import jakarta.annotation.security.PermitAll;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.InternalServerErrorException;
-import io.quarkus.elytron.security.common.BcryptUtil;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.SecurityContext;
-
+import org.bson.types.ObjectId;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import io.quarkus.security.Authenticated;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.transaction.Transactional;
-
-import com.benitoventas.users.mongodb.panache.entity.User;
 import com.benitoventas.credentials.mongodb.panache.entity.Credential;
 import com.benitoventas.roles.mongodb.panache.entity.Role;
+import com.benitoventas.users.mongodb.panache.entity.User;
+import com.mongodb.ErrorCategory;
+import com.mongodb.MongoWriteException;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Indexes;
+
+import io.quarkus.elytron.security.common.BcryptUtil;
+import io.quarkus.logging.Log;
+import io.quarkus.security.Authenticated;
+import io.smallrye.jwt.build.Jwt;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.ProcessingException;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
+import jakarta.ws.rs.core.MediaType;
 
 @Path("/auth")
+@ApplicationScoped
 @Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
 public class AuthResource {
+    @Inject
+    JsonWebToken jwt;
 
     @Inject
-    JsonWebToken jwt; 
+    @RestClient
+    ClientesClient clientes;
 
-    public record SignupPayload (
-        String name,
-        String email,
-        String phone,
-        String password,
-        String confirmPassword
-    ) {}
+    @ConfigProperty(name = "mp.jwt.verify.issuer")
+    String issuer;
 
-    public record LoginPayload (
-        String email,
-        String password
-    ) {}
+    public record SignupPayload(String name, String email, String phone, String password, String confirmPassword) {}
+    public record LoginPayload(String email, String password) {}
+    public record authResponse(String message, String token) {}
+    public record meResponse(String name, String email, String phone) {}
 
-    public record authResponse (
-        String message,
-        String token
-    ) {}
-
-    public record meResponse (
-        String name,
-        String email,
-        String phone
-    ) {}
+    @PostConstruct
+    void createIndexes() {
+        // Database constraints, not only pre-insert checks, prevent duplicate signups.
+        User.mongoCollection().createIndex(Indexes.ascending("email"), new IndexOptions().unique(true));
+        Credential.mongoCollection().createIndex(Indexes.ascending("email"), new IndexOptions().unique(true));
+    }
 
     @GET
     @Path("/me")
-    @Authenticated // allow any role as long is authenticated
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response me(@Context SecurityContext ctx) {
-        // Implement me endpoint
-        // 1. Get the authenticated user from the security context
-        // 2. Return the user information as JSON
-        // 3. Return an error message if the user is not authenticated
-        return Response.ok(501).build();
+    @Authenticated
+    public Response me() {
+        if (jwt.getSubject() == null || !ObjectId.isValid(jwt.getSubject())) {
+            return message(Status.UNAUTHORIZED, "La sesión no es válida.");
+        }
+        User user = User.findById(new ObjectId(jwt.getSubject()));
+        if (user == null || !Boolean.TRUE.equals(user.isActive)) {
+            return message(Status.UNAUTHORIZED, "La cuenta no está activa.");
+        }
+        return Response.ok(new meResponse(user.name, user.email, user.phone)).build();
     }
 
     @POST
     @Path("/clientes/signup")
     @PermitAll
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response clientSignup(@Context SecurityContext ctx, SignupPayload signupUser) {
-        // Implement signup
-        // 1. Validate the input (name, email, phone, password, confirmPassword)
-        if (signupUser.name() == null || signupUser.name().isEmpty() || signupUser.email() == null || signupUser.email().isEmpty() ||  signupUser.phone() == null || signupUser.phone().isEmpty() || signupUser.password() == null || signupUser.password().isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new authResponse("Por favor rellena todos los campos", null))
-                    .build();
+    public Response clientSignup(SignupPayload signupUser) {
+        if (signupUser == null || blank(signupUser.name()) || blank(signupUser.email())
+                || blank(signupUser.phone()) || blank(signupUser.password()) || blank(signupUser.confirmPassword())) {
+            return message(Status.BAD_REQUEST, "Por favor rellena todos los campos.");
         }
-        // 1.1 validate that password and confirmPassword are the same
         if (!signupUser.password().equals(signupUser.confirmPassword())) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new authResponse("Las contraseñas deben de ser iguales", null))
-                    .build();
+            return message(Status.BAD_REQUEST, "Las contraseñas deben de ser iguales.");
         }
-        // 2. Check if the email already exists in the database with isActive = true
-        User existingUser = User.find("email", signupUser.email()).firstResult();
-        if (existingUser != null && existingUser.isActive) {
-            return Response.status(Response.Status.CONFLICT)
-                    .entity(new authResponse("El correo electrónico ya está registrado", null))
-                    .build();
+        if (!validPasswordLength(signupUser.password())) {
+            return message(Status.BAD_REQUEST, "La contraseña no puede superar los 72 bytes UTF-8.");
         }
-        // 3. Create a new user
-        User user = new User();
-        user.name = signupUser.name();
-        user.email = signupUser.email();
-        user.phone = signupUser.phone();
-        // 3.1 find the role 
+        String email = normalizeEmail(signupUser.email());
+        if (!email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) {
+            return message(Status.BAD_REQUEST, "El correo electrónico no es válido.");
+        }
+        User user = User.find("email", email).firstResult();
+        if (user != null && Boolean.TRUE.equals(user.isActive)) {
+            return message(Status.CONFLICT, "El correo electrónico ya está registrado.");
+        }
+        Credential credential = Credential.find("email", email).firstResult();
+        if (credential != null && !passwordMatches(signupUser.password(), credential.passwordHash)) {
+            return invalidLogin();
+        }
+        if (user != null && (credential == null || !user.id.equals(credential.userId))) {
+            // Without a stored password proof, an incomplete account must not be claimed.
+            return message(Status.CONFLICT, "El registro está incompleto y requiere revisión del administrador.");
+        }
         Role role = Role.find("name", "cliente").firstResult();
         if (role == null) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new authResponse("No se pudo encontrar el rol de cliente", null))
-                    .build();
+            return message(Status.SERVICE_UNAVAILABLE, "No se pudo encontrar el rol de cliente.");
         }
-        user.roleIds.add(role.id);
-        user.persist();
-        // 4. Hash the password and store the new user in the database
-        String hashedPassword = BcryptUtil.bcryptHash(signupUser.password());
-        // 5. Save hased password into credentials
-        Credential credential = new Credential();
-        credential.userId = user.id;
-        credential.email = signupUser.email();
-        credential.passwordHash = hashedPassword;
-        credential.persist();
-        return Response.ok().build();
+        if (user != null && (user.roleIds == null || !user.roleIds.contains(role.id))) {
+            return message(Status.CONFLICT, "La cuenta no corresponde a un registro de cliente.");
+        }
+        boolean newUser = user == null;
+        if (newUser) {
+            if (credential == null) {
+                credential = new Credential();
+                credential.userId = new ObjectId();
+                credential.email = email;
+                credential.passwordHash = BcryptUtil.bcryptHash(signupUser.password());
+                try {
+                    // Store password proof first. If the user write fails, a retry can
+                    // verify this credential and reuse its userId without a transaction.
+                    credential.persist();
+                } catch (MongoWriteException exception) {
+                    if (exception.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
+                        throw exception;
+                    }
+                    return message(Status.CONFLICT, "El registro ya está en proceso. Reintenta con los mismos datos.");
+                }
+            }
+            user = new User();
+            user.id = credential.userId;
+            user.name = signupUser.name().trim();
+            user.email = email;
+            user.phone = signupUser.phone().trim();
+            user.isActive = false;
+            user.roleIds.add(role.id);
+            try {
+                user.persist();
+            } catch (MongoWriteException exception) {
+                if (exception.getError().getCategory() != ErrorCategory.DUPLICATE_KEY) {
+                    throw exception;
+                }
+                return message(Status.CONFLICT, "El registro ya está en proceso. Reintenta con los mismos datos.");
+            }
+        }
+        // Retries use the original stored profile, not unverified replacement data.
+        try {
+            String serviceToken = Jwt.issuer(issuer)
+                    .subject(user.id.toHexString())
+                    .groups(Set.of("auth-service"))
+                    .expiresIn(60)
+                    .sign();
+            try (Response result = clientes.create(
+                    new ClientesClient.ClientePayload(user.id.toHexString(), user.name, user.email, user.phone),
+                    "Bearer " + serviceToken)) {
+                if (result.getStatus() != Status.OK.getStatusCode()
+                        && result.getStatus() != Status.CREATED.getStatusCode()) {
+                    Log.warnf("Clientes rechazó completar el registro del usuario %s: HTTP %d", user.id, result.getStatus());
+                    return pendingSignup();
+                }
+            }
+        } catch (ProcessingException | WebApplicationException exception) {
+            Log.warnf("No se pudo contactar a Clientes para completar el registro del usuario %s", user.id);
+            return pendingSignup();
+        }
+        // If signing or activation fails after Clientes succeeded, the same signup
+        // can be retried: Clientes returns the existing profile for this userId.
+        String token = userToken(user);
+        user.isActive = true;
+        user.update();
+        return Response.status(newUser ? Status.CREATED : Status.OK)
+                .entity(new authResponse("Cliente registrado y cuenta activada correctamente.", token)).build();
     }
 
     @POST
     @Path("/clientes/login")
     @PermitAll
-    @Produces(MediaType.APPLICATION_JSON)
     public Response clientLogin(LoginPayload loginUser) {
-        // Implement login
-        // 1. Validate the input (email, password)
-        // 2. Check if the username exists in the database
-        // 3. Verify the password against the stored hash
-        // 4. Return a generated token message or an error message if something goes wrong
-        return Response.ok(501).build();
+        return login(loginUser, "cliente");
     }
 
     @POST
     @Path("/admin/signup")
-    @PermitAll
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response adminSignup(@Context SecurityContext ctx, SignupPayload signupUser) {
-        // Implement signup
-        // 1. Validate the input (name, email, phone, password, confirmPassword)
-        // 2. Check if the username or email already exists in the database
-        // 3. Hash the password and store the new user in the database
-        // 4. Return a generated token message or an error message if something goes wrong
-        return Response.ok(501).build();
+    @RolesAllowed("Admin")
+    public Response adminSignup(SignupPayload signupUser) {
+        return message(Status.NOT_IMPLEMENTED, "El registro de administradores no está implementado.");
     }
 
     @POST
     @Path("/admin/login")
     @PermitAll
-    @Produces(MediaType.APPLICATION_JSON)
     public Response adminLogin(LoginPayload loginUser) {
-        // Implement login
-        // 1. Validate the input (email, password)
-        // 2. Check if the username exists in the database
-        // 3. Verify the password against the stored hash
-        // 4. Return a generated token message or an error message if something goes wrong
-        return Response.ok(501).build();
+        return login(loginUser, "Admin");
+    }
+
+    private Response login(LoginPayload loginUser, String requiredRole) {
+        if (loginUser == null || blank(loginUser.email()) || blank(loginUser.password())) {
+            return message(Status.BAD_REQUEST, "Por favor ingresa el correo electrónico y la contraseña.");
+        }
+        if (!validPasswordLength(loginUser.password())) {
+            return invalidLogin();
+        }
+        String email = normalizeEmail(loginUser.email());
+        Credential credential = Credential.find("email", email).firstResult();
+        if (credential == null || !passwordMatches(loginUser.password(), credential.passwordHash)) {
+            return invalidLogin();
+        }
+        User user = User.findById(credential.userId);
+        if (user == null || !email.equals(user.email) || !Boolean.TRUE.equals(user.isActive)) {
+            return invalidLogin();
+        }
+        Set<String> roles = roleNames(user);
+        if (!roles.contains(requiredRole)) {
+            return invalidLogin();
+        }
+        return Response.ok(new authResponse("Inicio de sesión exitoso.", userToken(user))).build();
+    }
+
+    private Set<String> roleNames(User user) {
+        Set<String> names = new HashSet<>();
+        if (user.roleIds != null) {
+            for (ObjectId roleId : user.roleIds) {
+                Role role = Role.findById(roleId);
+                // This reserved group is only issued for server-to-server calls.
+                if (role != null && role.name != null && !"auth-service".equals(role.name)) {
+                    names.add(role.name);
+                }
+            }
+        }
+        return names;
+    }
+
+    private String userToken(User user) {
+        return Jwt.issuer(issuer)
+                .subject(user.id.toHexString())
+                .upn(user.email)
+                .groups(roleNames(user))
+                .expiresIn(3600)
+                .sign();
+    }
+
+    private boolean passwordMatches(String password, String hash) {
+        if (hash == null) {
+            return false;
+        }
+        try {
+            return BcryptUtil.matches(password, hash);
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    private boolean validPasswordLength(String password) {
+        return password.getBytes(StandardCharsets.UTF_8).length <= 72;
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean blank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private Response invalidLogin() {
+        return message(Status.UNAUTHORIZED, "Correo electrónico o contraseña incorrectos, o cuenta no activa.");
+    }
+
+    private Response pendingSignup() {
+        return message(Status.SERVICE_UNAVAILABLE,
+                "El registro está pendiente. Reintenta el signup con el mismo correo electrónico y contraseña.");
+    }
+
+    private Response message(Status status, String message) {
+        return Response.status(status).entity(new authResponse(message, null)).build();
     }
 }
