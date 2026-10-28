@@ -13,8 +13,9 @@ import io.quarkus.mongodb.panache.common.MongoEntity;
  */
 @MongoEntity(collection = "Users")
 public class User extends PanacheMongoEntity {
-    public String nombre;
+    public String name;
     public String email;
     public String phone;
     public Set<ObjectId> roleIds = new HashSet<>();
+    public Boolean isActive = false;
 }
