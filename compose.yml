@@ -85,9 +85,55 @@
        volumes:
           - ${HOME}/certs/productos:/certs:ro
 
+     auth-mongodb:
+       image: mongo:8.0
+       volumes:
+         - auth_mongodb_data:/data/db
+         - auth_mongodb_config:/data/configdb
+       networks:
+         - proxy
+       healthcheck:
+         test:
+           - CMD
+           - mongosh
+           - --quiet
+           - --eval
+           - "quit(db.adminCommand('ping').ok ? 0 : 1)"
+         interval: 5s
+         timeout: 5s
+         retries: 10
+         start_period: 10s
+
+     auth:
+       build:
+         context: ./auth
+         dockerfile: src/main/docker/Dockerfile.jvm
+       networks:
+         - proxy
+       labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.auth.rule=Host(`auth.benito.localhost`)"
+         - "traefik.http.routers.auth.entrypoints=websecure"
+         - "traefik.http.routers.auth.tls=true"
+         - "com.benitoventas.proxy=true"
+         - "traefik.http.routers.auth.service=auth"
+         - "traefik.http.services.auth.loadbalancer.server.port=8443"
+         - "traefik.http.services.auth.loadbalancer.server.scheme=https"
+         - "traefik.http.services.auth.loadbalancer.serverstransport=auth-mtls@file"
+       environment:
+         QUARKUS_MONGODB_CONNECTION_STRING: mongodb://auth-mongodb:27017
+         QUARKUS_MONGODB_DATABASE: auth
+       depends_on:
+         auth-mongodb:
+           condition: service_healthy
+       volumes:
+         - ${HOME}/certs/auth:/certs:ro
+
   volumes:
     productos_mongo_data:
     productos_mongo_config:
+    auth_mongodb_data:
+    auth_mongodb_config:
 
   networks:
     proxy:
