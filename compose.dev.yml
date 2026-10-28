@@ -27,7 +27,22 @@ services:
       - productos_dev_target:/workspace/target
       - maven_cache:/root/.m2
 
+  clientes:
+    build: !reset null
+    image: maven:3.9-eclipse-temurin-25
+    working_dir: /workspace
+    command:
+      - mvn
+      - quarkus:dev
+      - -Dquarkus.http.host=0.0.0.0
+      - -Ddebug=false
+    volumes:
+      - ./clientes:/workspace
+      - clientes_dev_target:/workspace/target
+      - maven_cache:/root/.m2
+
 volumes:
   auth_dev_target:
   productos_dev_target:
+  clientes_dev_target:
   maven_cache:

@@ -84,6 +84,7 @@
            condition: service_healthy
        volumes:
           - ${HOME}/certs/productos:/certs:ro
+          - ${HOME}/certs/jwt/publicKey.pem:/jwt/publicKey.pem:ro
 
      auth-mongodb:
        image: mongo:8.0
@@ -123,17 +124,74 @@
        environment:
          QUARKUS_MONGODB_CONNECTION_STRING: mongodb://auth-mongodb:27017
          QUARKUS_MONGODB_DATABASE: auth
+         MP_JWT_VERIFY_PUBLICKEY_LOCATION: /jwt/publicKey.pem
+         SMALLRYE_JWT_SIGN_KEY_LOCATION: /jwt/privateKey.pem
        depends_on:
          auth-mongodb:
            condition: service_healthy
+         clientes:
+           condition: service_started
        volumes:
          - ${HOME}/certs/auth:/certs:ro
+         - ${HOME}/certs/jwt:/jwt:ro
+
+     clientes-mongodb:
+       image: mongo:8.0
+       volumes:
+         - clientes_mongodb_data:/data/db
+         - clientes_mongodb_config:/data/configdb
+       networks:
+         - proxy
+       healthcheck:
+         test:
+           - CMD
+           - mongosh
+           - --quiet
+           - --eval
+           - "quit(db.adminCommand('ping').ok ? 0 : 1)"
+         interval: 5s
+         timeout: 5s
+         retries: 10
+         start_period: 10s
+
+     clientes:
+       build:
+         context: ./clientes
+         dockerfile: src/main/docker/Dockerfile.jvm
+       networks:
+         - proxy
+       labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.clientes.rule=Host(`clientes.benito.localhost`)"
+         - "traefik.http.routers.clientes.entrypoints=websecure"
+         - "traefik.http.routers.clientes.tls=true"
+         - "com.benitoventas.proxy=true"
+         - "traefik.http.routers.clientes.service=clientes"
+         - "traefik.http.services.clientes.loadbalancer.server.port=8443"
+         - "traefik.http.services.clientes.loadbalancer.server.scheme=https"
+         - "traefik.http.services.clientes.loadbalancer.serverstransport=clientes-mtls@file"
+       environment:
+         QUARKUS_MONGODB_CONNECTION_STRING: mongodb://clientes-mongodb:27017
+         QUARKUS_MONGODB_DATABASE: clientes
+       depends_on:
+         clientes-mongodb:
+           condition: service_healthy
+       volumes:
+         - ${HOME}/certs/clientes:/certs:ro
+         - type: bind
+           source: ${HOME}/certs/jwt/publicKey.pem
+           target: /jwt/publicKey.pem
+           read_only: true
+           bind:
+             create_host_path: false
 
   volumes:
     productos_mongo_data:
     productos_mongo_config:
     auth_mongodb_data:
     auth_mongodb_config:
+    clientes_mongodb_data:
+    clientes_mongodb_config:
 
   networks:
     proxy:
