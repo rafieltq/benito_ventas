@@ -2,9 +2,18 @@ tls:
   certificates:
     - certFile: /certs/local.crt
       keyFile: /certs/local.key
+    - certFile: /certs/clientes-local.crt
+      keyFile: /certs/clientes-local.key
 
 http:
   serversTransports:
+    clientes-mtls:
+      serverName: clientes
+      rootCAs:
+        - /certs/ca.crt
+      certificates:
+        - certFile: /certs/client.crt
+          keyFile: /certs/client.key
     auth-mtls:
       serverName: auth
       rootCAs:
