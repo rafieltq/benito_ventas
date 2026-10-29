@@ -1,9 +1,10 @@
-package com.benitoventas.cuentas;
+package com.benitoventas.Cuentas;
 
 import java.net.URI;
 import java.util.List;
 
 import org.bson.types.ObjectId;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
 import com.benitoventas.Cuentas.mongodb.panache.entity.Cuenta;
@@ -13,6 +14,7 @@ import com.mongodb.MongoWriteException;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -28,13 +30,16 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CuentasResource {
+    @Inject
+    JsonWebToken jwt;
+
     private static final Logger LOG = Logger.getLogger(CuentasResource.class);
 
     public record ListadoCuentasResponse(String mensaje, List<Cuenta> cuentas) {}
     public record MensajeResponse(String mensaje) {}
 
     @GET
-    @PermitAll
+    @RolesAllowed({"Admin", "auth-service"})
     public Response Listar() {
         try {
             List<Cuenta> cuentas = Cuenta.listAll();
@@ -49,7 +54,7 @@ public class CuentasResource {
 
     @GET
     @Path("/{id}")
-    @PermitAll
+    @RolesAllowed({"Admin", "auth-service", "Cliente"})
     public Response Obtener(@PathParam("id") String id) {
         if (id == null || !ObjectId.isValid(id)) {
             return mensaje(Response.Status.BAD_REQUEST, "ID de cuenta inválido.");
@@ -131,5 +136,10 @@ public class CuentasResource {
 
     private Response mensaje(Response.Status estado, String mensaje) {
         return Response.status(estado).entity(new MensajeResponse(mensaje)).build();
+    }
+
+    private boolean canAccess(ObjectId userId) {
+        return jwt.getGroups().contains("Admin")
+                || (userId != null && userId.toHexString().equals(jwt.getSubject()));
     }
 }
