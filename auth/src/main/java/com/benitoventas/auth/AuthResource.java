@@ -157,14 +157,29 @@ public class AuthResource {
                     .groups(Set.of("auth-service"))
                     .expiresIn(60)
                     .sign();
-            try (Response result = clientes.create(
-                    new ClientesClient.ClientePayload(user.id.toHexString(), user.name, user.email, user.phone),
-                    "Bearer " + serviceToken)) {
-                if (result.getStatus() != Status.OK.getStatusCode()
-                        && result.getStatus() != Status.CREATED.getStatusCode()) {
+            try (
+                Response result = clientes.create(
+                    new ClientesClient.ClientePayload(
+                      user.id.toHexString(),
+                      user.name,
+                      user.email,
+                      user.phone
+                    ), "Bearer " + serviceToken)
+                ) {
+                if (result.getStatus() != Status.OK.getStatusCode() && result.getStatus() != Status.CREATED.getStatusCode()) {
                     Log.warnf("Clientes rechazó completar el registro del usuario %s: HTTP %d", user.id, result.getStatus());
                     return pendingSignup();
                 }
+                ClientesClient.ClienteResponse cliente =
+                        result.readEntity(ClientesClient.ClienteResponse.class);
+                if (cliente == null
+                        || cliente.id() == null
+                        || !ObjectId.isValid(cliente.id())
+                        || !user.id.toHexString().equals(cliente.userId())) {
+                    Log.warn("Clientes devolvió una referencia de cliente inválida.");
+                    return pendingSignup();
+                }
+                user.clientId = new ObjectId(cliente.id());
             }
         } catch (ProcessingException | WebApplicationException exception) {
             Log.warnf("No se pudo contactar a Clientes para completar el registro del usuario %s", user.id);
@@ -241,6 +256,7 @@ public class AuthResource {
         return Jwt.issuer(issuer)
                 .subject(user.id.toHexString())
                 .upn(user.email)
+                .claim("clientId", user.clientId != null ? user.clientId.toHexString() : null)
                 .groups(roleNames(user))
                 .expiresIn(3600)
                 .sign();

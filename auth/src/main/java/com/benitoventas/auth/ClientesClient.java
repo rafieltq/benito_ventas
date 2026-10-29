@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 public interface ClientesClient {
     record ClientePayload(String userId, String name, String email, String phone) {}
+    record ClienteResponse(String id, String userId, String name, String email, String phone) {}
 
     @POST
     Response create(ClientePayload cliente, @HeaderParam("Authorization") String authorization);
