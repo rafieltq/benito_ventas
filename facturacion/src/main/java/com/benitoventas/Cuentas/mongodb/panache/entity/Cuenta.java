@@ -10,16 +10,16 @@ import org.bson.types.ObjectId;
 
 @MongoEntity(collection = "Cuentas")
 public class Cuenta extends PanacheMongoEntity {
-    public ObjectId userId;
-    public BigDecimal balance = BigDecimal.ZERO;
-    public List<Transaccion> transacciones = List.of();
+    ObjectId clienteId;
+    BigDecimal balance = BigDecimal.ZERO;
+    List<Transaccion> transacciones = List.of();
 
-    public void setUserId(ObjectId userId) {
-        this.userId = userId;
+    public void setClienteId(ObjectId clienteId) {
+        this.clienteId = clienteId;
     }
 
-    public ObjectId getUserId() {
-        return userId;
+    public ObjectId getClienteId() {
+        return clienteId;
     }
 
     public void setBalance(BigDecimal balance) {
