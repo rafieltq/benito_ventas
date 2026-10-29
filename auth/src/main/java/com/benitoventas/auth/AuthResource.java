@@ -50,6 +50,10 @@ public class AuthResource {
     @RestClient
     ClientesClient clientes;
 
+    @Inject
+    @RestClient
+    CuentasClient cuentas;
+
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
 
@@ -185,8 +189,31 @@ public class AuthResource {
             Log.warnf("No se pudo contactar a Clientes para completar el registro del usuario %s", user.id);
             return pendingSignup();
         }
-        // If signing or activation fails after Clientes succeeded, the same signup
-        // can be retried: Clientes returns the existing profile for this userId.
+        try {
+            String serviceToken = Jwt.issuer(issuer)
+                    .subject(user.id.toHexString())
+                    .claim("clienteId", user.clientId.toHexString())
+                    .groups(Set.of("auth-service"))
+                    .expiresIn(60)
+                    .sign();
+            try (Response result = cuentas.create(
+                    new CuentasClient.CuentaPayload(user.clientId.toHexString()), "Bearer " + serviceToken)) {
+                if (result.getStatus() != Status.OK.getStatusCode() && result.getStatus() != Status.CREATED.getStatusCode()) {
+                    Log.warnf("Facturación rechazó crear la cuenta del cliente %s: HTTP %d", user.clientId, result.getStatus());
+                    return pendingSignup();
+                }
+                CuentasClient.CuentaResponse cuenta = result.readEntity(CuentasClient.CuentaResponse.class);
+                if (cuenta == null || cuenta.id() == null || !ObjectId.isValid(cuenta.id())
+                        || !user.clientId.toHexString().equals(cuenta.clienteId())) {
+                    Log.warn("Facturación devolvió una referencia de cuenta inválida.");
+                    return pendingSignup();
+                }
+            }
+        } catch (ProcessingException | WebApplicationException exception) {
+            Log.warnf("No se pudo contactar a Facturación para crear la cuenta del cliente %s", user.clientId);
+            return pendingSignup();
+        }
+        // Retries recover the existing client and account if signing or activation fails.
         String token = userToken(user);
         user.isActive = true;
         user.update();
