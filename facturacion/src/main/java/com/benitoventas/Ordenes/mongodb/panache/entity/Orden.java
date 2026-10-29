@@ -14,6 +14,8 @@ public class Orden extends PanacheMongoEntity {
   List<OrdenItem> items;
   BigDecimal total = new BigDecimal("0.00");
   EstadoOrden estado = EstadoOrden.PENDIENTE; 
+  String cuentaId;
+  boolean procesando = false;
 
 
   public String getClienteId() {
@@ -54,5 +56,21 @@ public class Orden extends PanacheMongoEntity {
 
   public void setEstado(EstadoOrden estado) {
     this.estado = estado;
+  }
+
+  public String getCuentaId() {
+    return cuentaId;
+  }
+
+  public void setCuentaId(String cuentaId) {
+    this.cuentaId = cuentaId;
+  } 
+
+  public boolean getProcesando() {
+    return procesando;
+  }
+
+  public void setProcesando(boolean procesando) {
+    this.procesando = procesando;
   }
 }

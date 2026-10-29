@@ -13,6 +13,8 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.benitoventas.Cuentas.mongodb.panache.entity.Cuenta;
+import com.benitoventas.Cuentas.mongodb.panache.entity.Transaccion;
+import com.benitoventas.Cuentas.mongodb.panache.entity.TipoTransaccion;
 import com.benitoventas.Jobs.mongodb.panache.entity.EstadoJob;
 import com.benitoventas.Jobs.mongodb.panache.entity.Job;
 import com.benitoventas.Jobs.mongodb.panache.entity.TipoJob;
@@ -22,6 +24,11 @@ import com.benitoventas.Ordenes.dto.CrearOrdenRequest;
 import com.benitoventas.Ordenes.mongodb.panache.entity.EstadoOrden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.Orden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.OrdenItem;
+import com.mongodb.MongoException;
+
+import java.util.List;
+
+import io.quarkus.logging.Log;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import jakarta.annotation.security.RolesAllowed;
@@ -46,13 +53,95 @@ public class OrdenesService {
     @RestClient
     ProductosClient productos;
 
-    private record OrdenPreparada(Orden orden, ObjectId cuentaId, ObjectId userId) {}
+    private record OrdenPreparada(Orden orden, ObjectId cuentaId, ObjectId clienteId) {}
 
     @RolesAllowed({"Admin", "cliente"})
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     public Orden crear(CrearOrdenRequest solicitud) {
         OrdenPreparada preparada = preparar(solicitud);
         return QuarkusTransaction.requiringNew().call(() -> guardar(preparada));
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    public void placeOrder(ObjectId ordenId) {
+        if (ordenId == null) {
+            throw new IllegalArgumentException("Debe proporcionar un ID de orden.");
+        }
+        for (int intento = 1; intento <= 3; intento++) {
+            try {
+                QuarkusTransaction.requiringNew().run(() -> {
+                    Orden orden = Orden.findById(ordenId);
+                    if (orden == null) {
+                        throw new IllegalArgumentException("No se encontró la orden " + ordenId.toHexString() + ".");
+                    }
+                    EstadoOrden estadoInicial = orden.getEstado();
+                    if (estadoInicial == EstadoOrden.PAGADA) {
+                        Log.info("La orden " + ordenId.toHexString() + " ya ha sido pagada.");
+                        return;
+                    }
+                    if (estadoInicial != EstadoOrden.PENDIENTE && estadoInicial != EstadoOrden.PAGO_PENDIENTE) {
+                        throw new IllegalStateException("La orden no tiene un estado válido para procesar.");
+                    }
+                    if (!idValido(orden.getCuentaId())) {
+                        throw new IllegalStateException("La orden no tiene una cuenta válida.");
+                    }
+                    BigDecimal total = orden.getTotal();
+                    if (total == null || total.signum() < 0) {
+                        throw new IllegalStateException("La orden no tiene un total válido.");
+                    }
+                    Cuenta cuenta = Cuenta.findById(new ObjectId(orden.getCuentaId()));
+                    if (cuenta == null || cuenta.getBalance() == null) {
+                        throw new IllegalStateException("La cuenta no existe o no tiene un balance válido.");
+                    }
+
+                    // El reclamo y su liberación pertenecen a la misma transacción.
+                    long reclamadas = Orden.update("procesando", true)
+                            .where("_id = ?1 and procesando != ?2 and estado = ?3", ordenId, true, estadoInicial);
+                    if (reclamadas != 1) {
+                        throw new IllegalStateException("La orden no está disponible para procesar.");
+                    }
+
+                    if (cuenta.getBalance().compareTo(total) >= 0) {
+                        Transaccion transaccion = new Transaccion();
+                        transaccion.setReferenciaId(orden.id);
+                        transaccion.setMonto(total);
+                        transaccion.setFecha(Instant.now());
+                        transaccion.setTipo(TipoTransaccion.DEBITO);
+
+                        List<Transaccion> nuevasTransacciones = cuenta.getTransacciones() == null
+                                ? new ArrayList<>()
+                                : new ArrayList<>(cuenta.getTransacciones());
+                        nuevasTransacciones.add(transaccion);
+                        cuenta.setTransacciones(nuevasTransacciones);
+                        cuenta.setBalance(cuenta.getBalance().subtract(total));
+                        cuenta.update();
+                        orden.setEstado(EstadoOrden.PAGADA);
+                    } else {
+                        orden.setEstado(EstadoOrden.PAGO_PENDIENTE);
+                    }
+                    orden.setProcesando(false);
+                    orden.update();
+                });
+                return;
+            } catch (RuntimeException e) {
+                if (intento == 3 || !esConflictoTransitorio(e)) {
+                    throw e;
+                }
+                Log.warn("Conflicto transitorio al procesar orden " + ordenId.toHexString()
+                        + ". Reintento " + (intento + 1) + "/3.", e);
+            }
+        }
+    }
+
+    private boolean esConflictoTransitorio(Throwable error) {
+        while (error != null) {
+            if (error instanceof MongoException mongo
+                    && (mongo.hasErrorLabel("TransientTransactionError") || mongo.getCode() == 112)) {
+                return true;
+            }
+            error = error.getCause();
+        }
+        return false;
     }
 
     private OrdenPreparada preparar(CrearOrdenRequest solicitud) {
@@ -71,7 +160,7 @@ public class OrdenesService {
             throw new OrdenPreparacionException(Status.FORBIDDEN, "El cliente no pertenece al usuario autenticado.");
         }
 
-        Cuenta cuenta = Cuenta.find("userId", userId).firstResult();
+        Cuenta cuenta = Cuenta.find("clienteId", new ObjectId(clienteId)).firstResult();
         if (cuenta == null) {
             throw new OrdenPreparacionException(Status.CONFLICT, "El cliente no tiene una cuenta.");
         }
@@ -101,15 +190,16 @@ public class OrdenesService {
         orden.setClienteId(clienteId);
         orden.setFecha(Instant.now());
         orden.setItems(items);
+        orden.setCuentaId(cuenta.id.toHexString());
         orden.setTotal(total);
         orden.setEstado(EstadoOrden.PENDIENTE);
-        return new OrdenPreparada(orden, cuenta.id, userId);
+        return new OrdenPreparada(orden, cuenta.id, new ObjectId(clienteId));
     }
 
     private Orden guardar(OrdenPreparada preparada) {
         if (preparada == null || preparada.orden() == null
-                || preparada.cuentaId() == null || preparada.userId() == null) {
-            throw new IllegalArgumentException("Debe proporcionar una orden preparada con su cuenta y usuario.");
+                || preparada.cuentaId() == null || preparada.clienteId() == null) {
+            throw new IllegalArgumentException("Debe proporcionar una orden preparada con su cuenta y cliente.");
         }
 
         Orden orden = preparada.orden();
@@ -118,7 +208,7 @@ public class OrdenesService {
         }
 
         Cuenta cuenta = Cuenta.findById(preparada.cuentaId());
-        if (cuenta == null || !preparada.userId().equals(cuenta.userId)) {
+        if (cuenta == null || !preparada.clienteId().equals(cuenta.getClienteId())) {
             throw new OrdenPreparacionException(Status.CONFLICT, "La cuenta del cliente ya no está disponible.");
         }
 
