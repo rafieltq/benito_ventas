@@ -42,11 +42,11 @@ public class Producto extends PanacheMongoEntity {
     }
 
     // precio accessors
-    public Float getPrecio() {
+    public BigDecimal getPrecio() {
         return precio;
     }
 
-    public void setPrecio(Float precio) {
+    public void setPrecio(BigDecimal precio) {
         this.precio = precio;
     }
 }
