@@ -8,11 +8,13 @@ import org.bson.codecs.pojo.annotations.BsonProperty;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 import io.quarkus.mongodb.panache.PanacheMongoEntity;
 
+import java.math.BigDecimal;
+
 @MongoEntity(collection = "Productos")
 public class Producto extends PanacheMongoEntity {
-    public String nombre;
-    public String descripcion;
-    public Float precio;
+    String nombre;
+    String descripcion;
+    BigDecimal precio;
 
     // // will be persisted as a 'birth' field in MongoDB
     // @BsonProperty("birth") // whats bson: is it for? 
