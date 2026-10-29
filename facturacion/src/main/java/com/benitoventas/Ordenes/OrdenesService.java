@@ -93,6 +93,10 @@ public class OrdenesService {
                     if (cuenta == null || cuenta.getBalance() == null) {
                         throw new IllegalStateException("La cuenta no existe o no tiene un balance válido.");
                     }
+                    if (!idValido(orden.getClienteId())
+                            || !new ObjectId(orden.getClienteId()).equals(cuenta.getClienteId())) {
+                        throw new IllegalStateException("La cuenta no pertenece al cliente de la orden.");
+                    }
 
                     // El reclamo y su liberación pertenecen a la misma transacción.
                     long reclamadas = Orden.update("procesando", true)

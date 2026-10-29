@@ -6,6 +6,7 @@ import java.util.List;
 import org.bson.types.ObjectId;
 import org.jboss.logging.Logger;
 
+import com.benitoventas.Cuentas.mongodb.panache.entity.Cuenta;
 import com.benitoventas.Ordenes.dto.CrearOrdenRequest;
 import com.benitoventas.Ordenes.mongodb.panache.entity.EstadoOrden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.Orden;
@@ -48,40 +49,19 @@ public class OrdenesResource {
     public record MensajeResponse(String mensaje) {}
 
     @GET
-    @RolesAllowed({"Admin", "Clientes"})
+    @RolesAllowed({"Admin", "cliente"})
     public Response Listar() {
-        // validate the group of the token
-        if (!jwt.getGroups().contains("Admin") && !jwt.getGroups().contains("Clientes")) {
-            return mensaje(Response.Status.FORBIDDEN, "No tiene permisos para listar órdenes.");
-        }
-
-        // if the JWT is admin fetch all the orders 
-        if (jwt.getGroups().contains("Admin")) {
-            try {
-                List<Orden> ordenes = Orden.listAll();
-                String mensaje = ordenes.isEmpty()
-                        ? "No se encontraron órdenes."
-                        : "Listado de órdenes obtenido exitosamente.";
-                return Response.ok(new ListadoOrdenesResponse(mensaje, ordenes)).build();
-            } catch (MongoException e) {
-                return errorMongo(e);
+        boolean administrador = jwt.getGroups().contains("Admin");
+        String clienteId = null;
+        if (!administrador) {
+            Object claim = jwt.getClaim("clienteId");
+            if (!(claim instanceof String id) || !ObjectId.isValid(id)) {
+                return mensaje(Response.Status.FORBIDDEN, "La sesión no tiene un clienteId válido.");
             }
-        }
-
-        if (jwt.getGroups().contains("Clientes")) {
-            String userId = jwt.getClaim("sub");
-            try {
-                List<Orden> ordenes = Orden.list("userId", userId);
-                String mensaje = ordenes.isEmpty()
-                        ? "No se encontraron órdenes para el usuario."
-                        : "Listado de órdenes del usuario obtenido exitosamente.";
-                return Response.ok(new ListadoOrdenesResponse(mensaje, ordenes)).build();
-            } catch (MongoException e) {
-                return errorMongo(e);
-            }
+            clienteId = new ObjectId(id).toHexString();
         }
         try {
-            List<Orden> ordenes = Orden.listAll();
+            List<Orden> ordenes = administrador ? Orden.listAll() : Orden.list("clienteId", clienteId);
             String mensaje = ordenes.isEmpty()
                     ? "No se encontraron órdenes."
                     : "Listado de órdenes obtenido exitosamente.";
@@ -147,7 +127,21 @@ public class OrdenesResource {
             if (existente == null) {
                 return mensaje(Response.Status.NOT_FOUND, "Orden no encontrada.");
             }
+            if ((orden.getClienteId() != null && !orden.getClienteId().equals(existente.getClienteId()))
+                    || (orden.getCuentaId() != null && !orden.getCuentaId().equals(existente.getCuentaId()))) {
+                return mensaje(Response.Status.BAD_REQUEST, "No se puede cambiar el cliente ni la cuenta de una orden.");
+            }
+            if (existente.getClienteId() == null || !ObjectId.isValid(existente.getClienteId())
+                    || existente.getCuentaId() == null || !ObjectId.isValid(existente.getCuentaId())) {
+                return mensaje(Response.Status.CONFLICT, "La orden no tiene un cliente o una cuenta válidos.");
+            }
+            Cuenta cuenta = Cuenta.findById(new ObjectId(existente.getCuentaId()));
+            if (cuenta == null || !new ObjectId(existente.getClienteId()).equals(cuenta.getClienteId())) {
+                return mensaje(Response.Status.CONFLICT, "La cuenta no pertenece al cliente de la orden.");
+            }
             orden.id = ordenId;
+            orden.setClienteId(existente.getClienteId());
+            orden.setCuentaId(existente.getCuentaId());
             orden.update();
             return Response.ok(orden).build();
         } catch (MongoException e) {
