@@ -44,14 +44,42 @@ else
   install -m 644 "$tmp/server.crt" "$certs/facturacion/server.crt"
 fi
 
+if [[ -s "$certs/facturacion/client.crt" && -s "$certs/facturacion/client.key" ]]; then
+  printf 'Keeping existing certificate: %s/facturacion/client.crt\n' "$certs"
+elif [[ -e "$certs/facturacion/client.crt" || -e "$certs/facturacion/client.key" ]]; then
+  printf 'Partial facturacion client certificate/key pair; refusing to overwrite.\n' >&2
+  exit 1
+else
+  (
+    umask 077
+    openssl req -new -newkey rsa:2048 -noenc \
+      -keyout "$tmp/client.key" \
+      -out "$tmp/client.csr" \
+      -subj "/CN=facturacion-client"
+  )
+  openssl x509 -req \
+    -in "$tmp/client.csr" \
+    -CA "$certs/ca/ca.crt" \
+    -CAkey "$certs/ca/ca.key" \
+    -CAcreateserial \
+    -out "$tmp/client.crt" \
+    -days 365 -sha256 \
+    -extfile <(printf '%s\n' \
+      'basicConstraints=critical,CA:FALSE' \
+      'keyUsage=critical,digitalSignature' \
+      'extendedKeyUsage=clientAuth')
+  install -m 600 "$tmp/client.key" "$certs/facturacion/client.key"
+  install -m 644 "$tmp/client.crt" "$certs/facturacion/client.crt"
+fi
+
 cp "$certs/ca/ca.crt" "$certs/facturacion/ca.crt"
 chmod 644 "$certs/facturacion/ca.crt"
-chmod 600 "$certs/facturacion/server.key"
+chmod 600 "$certs/facturacion/server.key" "$certs/facturacion/client.key"
 
 # Packaged Quarkus images run as UID 185. Dev containers run as root.
 if command -v setfacl >/dev/null; then
-  setfacl -m u:185:r "$certs/facturacion/server.key"
+  setfacl -m u:185:r "$certs/facturacion/server.key" "$certs/facturacion/client.key"
 else
-  printf 'Grant UID 185 read access to the facturacion server key before running packaged images.\n' >&2
+  printf 'Grant UID 185 read access to the facturacion server and client keys before running packaged images.\n' >&2
 fi
 printf 'facturacion certificates ready under %s/facturacion. No existing complete key pairs were replaced.\n' "$certs"
