@@ -13,6 +13,9 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.benitoventas.Cuentas.mongodb.panache.entity.Cuenta;
+import com.benitoventas.Jobs.mongodb.panache.entity.EstadoJob;
+import com.benitoventas.Jobs.mongodb.panache.entity.Job;
+import com.benitoventas.Jobs.mongodb.panache.entity.TipoJob;
 import com.benitoventas.Ordenes.client.ClientesClient;
 import com.benitoventas.Ordenes.client.ProductosClient;
 import com.benitoventas.Ordenes.dto.CrearOrdenRequest;
@@ -20,6 +23,7 @@ import com.benitoventas.Ordenes.mongodb.panache.entity.EstadoOrden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.Orden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.OrdenItem;
 
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -30,7 +34,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.Status;
 
 @ApplicationScoped
-public class OrdenPreparacionService {
+public class OrdenesService {
     @Inject
     JsonWebToken jwt;
 
@@ -42,11 +46,16 @@ public class OrdenPreparacionService {
     @RestClient
     ProductosClient productos;
 
-    public record OrdenPreparada(Orden orden, ObjectId cuentaId, ObjectId userId) {}
+    private record OrdenPreparada(Orden orden, ObjectId cuentaId, ObjectId userId) {}
 
     @RolesAllowed({"Admin", "cliente"})
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
-    public OrdenPreparada preparar(CrearOrdenRequest solicitud) {
+    public Orden crear(CrearOrdenRequest solicitud) {
+        OrdenPreparada preparada = preparar(solicitud);
+        return QuarkusTransaction.requiringNew().call(() -> guardar(preparada));
+    }
+
+    private OrdenPreparada preparar(CrearOrdenRequest solicitud) {
         validarSolicitud(solicitud);
         Set<String> grupos = jwt.getGroups();
         boolean administrador = grupos != null && grupos.contains("Admin");
@@ -95,6 +104,33 @@ public class OrdenPreparacionService {
         orden.setTotal(total);
         orden.setEstado(EstadoOrden.PENDIENTE);
         return new OrdenPreparada(orden, cuenta.id, userId);
+    }
+
+    private Orden guardar(OrdenPreparada preparada) {
+        if (preparada == null || preparada.orden() == null
+                || preparada.cuentaId() == null || preparada.userId() == null) {
+            throw new IllegalArgumentException("Debe proporcionar una orden preparada con su cuenta y usuario.");
+        }
+
+        Orden orden = preparada.orden();
+        if (orden.id != null) {
+            throw new IllegalArgumentException("La orden preparada no debe tener un identificador asignado.");
+        }
+
+        Cuenta cuenta = Cuenta.findById(preparada.cuentaId());
+        if (cuenta == null || !preparada.userId().equals(cuenta.userId)) {
+            throw new OrdenPreparacionException(Status.CONFLICT, "La cuenta del cliente ya no está disponible.");
+        }
+
+        orden.persist();
+
+        Job job = new Job();
+        job.setTipo(TipoJob.PLACE_ORDER);
+        job.setContenido(orden.id.toHexString());
+        job.setEstado(EstadoJob.PENDING);
+        job.persist();
+
+        return orden;
     }
 
     private void validarSolicitud(CrearOrdenRequest solicitud) {
