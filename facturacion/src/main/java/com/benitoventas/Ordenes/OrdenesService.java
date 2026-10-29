@@ -153,9 +153,9 @@ public class OrdenesService {
             }
             return new ObjectId(solicitud.clienteId()).toHexString();
         }
-        Object claim = jwt.getClaim("clientId");
+        Object claim = jwt.getClaim("clienteId");
         if (!(claim instanceof String clienteId) || !idValido(clienteId)) {
-            throw new OrdenPreparacionException(Status.FORBIDDEN, "La sesión no tiene un clientId válido.");
+            throw new OrdenPreparacionException(Status.FORBIDDEN, "La sesión no tiene un clienteId válido.");
         }
         ObjectId propietario = new ObjectId(clienteId);
         if (solicitud.clienteId() != null && (!idValido(solicitud.clienteId())

@@ -6,11 +6,14 @@ import java.util.List;
 import org.bson.types.ObjectId;
 import org.jboss.logging.Logger;
 
+import com.benitoventas.Ordenes.dto.CrearOrdenRequest;
+import com.benitoventas.Ordenes.mongodb.panache.entity.EstadoOrden;
 import com.benitoventas.Ordenes.mongodb.panache.entity.Orden;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
-import jakarta.transaction.Transactional;
+import io.quarkus.narayana.jta.QuarkusTransactionException;
+import jakarta.transaction.TransactionalException;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import jakarta.inject.Inject;
@@ -35,9 +38,13 @@ public class OrdenesResource {
     @Inject
     JsonWebToken jwt;
 
+    @Inject
+    OrdenesService ordenesService;
+
     private static final Logger LOG = Logger.getLogger(OrdenesResource.class);
 
     public record ListadoOrdenesResponse(String mensaje, List<Orden> ordenes) {}
+    public record OrdenCreadaResponse(String mensaje, String ordenId, EstadoOrden estado) {}
     public record MensajeResponse(String mensaje) {}
 
     @GET
@@ -103,20 +110,24 @@ public class OrdenesResource {
     }
 
     @POST
-    @RolesAllowed({"Admin", "Clientes"})
-    @Transactional
-    public Response Crear(Orden orden) {
-        // validate all the data required is in the payload
-        // save the order and the order items in the database and save the Task for this order to be processed by kafka later
-        if (orden == null) {
-            return mensaje(Response.Status.BAD_REQUEST, "Debe enviar una orden.");
-        }
-
+    @RolesAllowed({"Admin", "cliente"})
+    public Response Crear(CrearOrdenRequest solicitud) {
         try {
-            orden.persist();
-            return Response.created(URI.create("/ordenes/" + orden.id)).entity(orden).build();
+            Orden orden = ordenesService.crear(solicitud);
+            String ordenId = orden.id.toHexString();
+            return Response.created(URI.create("/ordenes/" + ordenId))
+                    .entity(new OrdenCreadaResponse("Su orden ha sido colocada", ordenId, orden.getEstado()))
+                    .build();
+        } catch (OrdenPreparacionException e) {
+            if (e.getEstadoHttp().getStatusCode() >= 500) {
+                LOG.error("Error al preparar la orden.", e);
+            }
+            return mensaje(e.getEstadoHttp(), e.getMessage());
         } catch (MongoException e) {
             return errorMongo(e);
+        } catch (QuarkusTransactionException | TransactionalException e) {
+            LOG.error("No se pudo confirmar la creación de la orden.", e);
+            return mensaje(Response.Status.INTERNAL_SERVER_ERROR, "Error interno del servidor.");
         }
     }
 

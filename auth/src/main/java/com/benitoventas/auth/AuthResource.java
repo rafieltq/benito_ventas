@@ -256,7 +256,7 @@ public class AuthResource {
         return Jwt.issuer(issuer)
                 .subject(user.id.toHexString())
                 .upn(user.email)
-                .claim("clientId", user.clientId != null ? user.clientId.toHexString() : null)
+                .claim("clienteId", user.clientId != null ? user.clientId.toHexString() : null)
                 .groups(roleNames(user))
                 .expiresIn(3600)
                 .sign();

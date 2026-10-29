@@ -63,6 +63,10 @@ public class ClientesResource {
         if (!ObjectId.isValid(id)) {
             return error(Status.BAD_REQUEST, "El identificador del cliente no es válido.");
         }
+        // validate that the user can access this clients
+        if (!canAccess(new ObjectId(id))) {
+            return error(Status.FORBIDDEN, "No tienes permiso para acceder a este cliente.");
+        }
         Cliente cliente = Cliente.findById(new ObjectId(id));
         if (cliente == null) {
             return error(Status.NOT_FOUND, "No se encontró el cliente.");
