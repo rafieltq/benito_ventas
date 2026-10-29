@@ -12,8 +12,8 @@ http:
       rootCAs:
         - /certs/ca.crt
       certificates:
-        - certFile: /certs/facturacion.crt
-          keyFile: /certs/facturacion.key
+        - certFile: /certs/client.crt
+          keyFile: /certs/client.key
     clientes-mtls:
       serverName: clientes
       rootCAs:
