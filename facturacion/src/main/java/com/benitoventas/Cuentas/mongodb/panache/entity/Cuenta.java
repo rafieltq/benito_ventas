@@ -6,15 +6,12 @@ import java.util.List;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 import io.quarkus.mongodb.panache.PanacheMongoEntity;
 
-import org.bson.codecs.pojo.annotations.BsonId;
 import org.bson.types.ObjectId;
-
-import com.benitoventas.Cuentas.mongodb.panache.entity.Transaccion;
 
 @MongoEntity(collection = "Cuentas")
 public class Cuenta extends PanacheMongoEntity {
     public ObjectId userId;
-    public BigDecimal balance = 0;
+    public BigDecimal balance = BigDecimal.ZERO;
     public List<Transaccion> transacciones = List.of();
 
     public void setUserId(ObjectId userId) {
@@ -25,7 +22,7 @@ public class Cuenta extends PanacheMongoEntity {
         return userId;
     }
 
-    public void setBalance(Float balance) {
+    public void setBalance(BigDecimal balance) {
         this.balance = balance;
     }
 
