@@ -43,6 +43,8 @@
 
      productos-mongo:
        image: mongo:8.0
+       ports:
+         - "27018:27017"
        volumes:
          - productos_mongo_data:/data/db
          - productos_mongo_config:/data/configdb
@@ -88,6 +90,8 @@
 
      auth-mongodb:
        image: mongo:8.0
+       ports:
+         - "27019:27017"
        volumes:
          - auth_mongodb_data:/data/db
          - auth_mongodb_config:/data/configdb
@@ -137,6 +141,8 @@
 
      clientes-mongodb:
        image: mongo:8.0
+       ports:
+         - "27020:27017"
        volumes:
          - clientes_mongodb_data:/data/db
          - clientes_mongodb_config:/data/configdb
@@ -187,6 +193,8 @@
 
      facturacion-mongodb:
        image: mongo:8.0
+       ports:
+         - "27021:27017"
        volumes:
          - facturacion_mongodb_data:/data/db
          - facturacion_mongodb_config:/data/configdb
