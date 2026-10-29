@@ -190,6 +190,7 @@
        volumes:
          - facturacion_mongodb_data:/data/db
          - facturacion_mongodb_config:/data/configdb
+       command: ["mongod", "--replSet", "rs-facturacion", "--bind_ip_all"]
        networks:
          - proxy
        healthcheck:
@@ -221,7 +222,7 @@
          - "traefik.http.services.facturacion.loadbalancer.server.scheme=https"
          - "traefik.http.services.facturacion.loadbalancer.serverstransport=facturacion-mtls@file"
        environment:
-         QUARKUS_MONGODB_CONNECTION_STRING: mongodb://facturacion-mongodb:27017
+         QUARKUS_MONGODB_CONNECTION_STRING: mongodb://facturacion-mongodb:27017/?replicaSet=rs-facturacion
          QUARKUS_MONGODB_DATABASE: facturacion
        depends_on:
          facturacion-mongodb:
