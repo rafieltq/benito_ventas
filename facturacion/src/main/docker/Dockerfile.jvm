@@ -1,11 +1,14 @@
 ####
 # This Dockerfile is used in order to build a container that runs the Quarkus application in JVM mode
 #
-# Before building the container image run:
+# Maven packages the application inside the build stage; no local JDK or target/ is required.
+# Tests are skipped during image packaging and should run separately.
 #
-# ./mvnw package
+# From the repository root, build and run with:
 #
-# Then, build the image with:
+# docker compose up --build
+#
+# Or, from the facturacion directory, build the image with:
 #
 # docker build -f src/main/docker/Dockerfile.jvm -t quarkus/facturacion-jvm .
 #
@@ -80,16 +83,29 @@
 # You can find more information about the UBI base runtime images and their configuration here:
 # https://rh-openjdk.github.io/redhat-openjdk-containers/
 ###
-FROM registry.access.redhat.com/ubi9/openjdk-25-runtime:1.24
+FROM eclipse-temurin:25-jdk AS build
+
+# The wrapper's pinned checksum is for the ZIP distribution, so unzip is required.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+COPY src/ src/
+RUN --mount=type=cache,target=/root/.m2 sh ./mvnw -B -DskipTests package
+
+FROM registry.access.redhat.com/ubi9/openjdk-25-runtime:1.24 AS runtime
 
 ENV LANGUAGE='en_US:en'
 
 
 # We make four distinct layers so if there are application changes the library layers can be re-used
-COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/
-COPY --chown=185 target/quarkus-app/*.jar /deployments/
-COPY --chown=185 target/quarkus-app/app/ /deployments/app/
-COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
+COPY --from=build --chown=185 /workspace/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /workspace/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /workspace/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /workspace/target/quarkus-app/quarkus/ /deployments/quarkus/
 
 EXPOSE 8080
 USER 185
