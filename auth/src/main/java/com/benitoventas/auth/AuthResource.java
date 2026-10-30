@@ -22,6 +22,7 @@ import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.logging.Log;
 import io.quarkus.security.Authenticated;
 import io.smallrye.jwt.build.Jwt;
+import io.smallrye.jwt.build.JwtClaimsBuilder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -280,13 +281,15 @@ public class AuthResource {
     }
 
     private String userToken(User user) {
-        return Jwt.issuer(issuer)
+        JwtClaimsBuilder token = Jwt.issuer(issuer)
                 .subject(user.id.toHexString())
                 .upn(user.email)
-                .claim("clienteId", user.clienteId != null ? user.clienteId.toHexString() : null)
                 .groups(roleNames(user))
-                .expiresIn(3600)
-                .sign();
+                .expiresIn(3600);
+        if (user.clienteId != null) {
+            token.claim("clienteId", user.clienteId.toHexString());
+        }
+        return token.sign();
     }
 
     private boolean passwordMatches(String password, String hash) {

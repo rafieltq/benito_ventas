@@ -4,6 +4,16 @@ tls:
       keyFile: /certs/local.key
     - certFile: /certs/clientes-local.crt
       keyFile: /certs/clientes-local.key
+    - certFile: /certs/admin-services.crt
+      keyFile: /certs/admin-services.key
+
+  options:
+    admin-mtls:
+      minVersion: VersionTLS12
+      clientAuth:
+        caFiles:
+          - /certs/admin-ca.crt
+        clientAuthType: RequireAndVerifyClientCert
 
 http:
   serversTransports:
@@ -35,4 +45,3 @@ http:
       certificates:
         - certFile: /certs/client.crt
           keyFile: /certs/client.key
-
