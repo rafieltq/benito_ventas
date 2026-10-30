@@ -38,7 +38,7 @@ if ! has_complete_pair local; then
       -addext "basicConstraints=critical,CA:FALSE" \
       -addext "keyUsage=critical,digitalSignature,keyEncipherment" \
       -addext "extendedKeyUsage=serverAuth" \
-      -addext "subjectAltName=DNS:productos.benito.localhost,DNS:auth.benito.localhost,DNS:dashboard.docker.localhost"
+      -addext "subjectAltName=DNS:productos.benito.localhost,DNS:auth.benito.localhost,DNS:dashboard.docker.localhost,DNS:facturacion.benito.localhost"
   )
   install -m 600 "$tmp/local.key" "$certs/traefik/local.key"
   install -m 644 "$tmp/local.crt" "$certs/traefik/local.crt"

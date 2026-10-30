@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Local-development certificates stay outside the repository.
+# OpenSSL prompts for the existing CA passphrase when signing is required.
+certs="${CERTS_DIR:-$HOME/certs}"
+if [[ ! -s "$certs/ca/ca.crt" || ! -s "$certs/ca/ca.key" ]]; then
+  printf 'Missing existing CA certificate/key under %s/ca\n' "$certs" >&2
+  exit 1
+fi
+command -v openssl >/dev/null
+
+mkdir -p "$certs/auth"
+tmp="$(mktemp -d)"
+trap 'rm -rf -- "$tmp"' EXIT
+
+if [[ -s "$certs/auth/server.crt" && -s "$certs/auth/server.key" ]]; then
+  printf 'Keeping existing certificate: %s/auth/server.crt\n' "$certs"
+elif [[ -e "$certs/auth/server.crt" || -e "$certs/auth/server.key" ]]; then
+  printf 'Partial Auth certificate/key pair; refusing to overwrite.\n' >&2
+  exit 1
+else
+  # Stage the pair so a failed CA signing operation does not leave a partial setup.
+  (
+    umask 077
+    openssl req -new -newkey rsa:2048 -noenc \
+      -keyout "$tmp/server.key" \
+      -out "$tmp/server.csr" \
+      -subj "/CN=auth"
+  )
+  openssl x509 -req \
+    -in "$tmp/server.csr" \
+    -CA "$certs/ca/ca.crt" \
+    -CAkey "$certs/ca/ca.key" \
+    -CAcreateserial \
+    -out "$tmp/server.crt" \
+    -days 365 -sha256 \
+    -extfile <(printf '%s\n' \
+      'basicConstraints=critical,CA:FALSE' \
+      'keyUsage=critical,digitalSignature,keyEncipherment' \
+      'extendedKeyUsage=serverAuth' \
+      'subjectAltName=DNS:auth')
+  install -m 600 "$tmp/server.key" "$certs/auth/server.key"
+  install -m 644 "$tmp/server.crt" "$certs/auth/server.crt"
+fi
+
+cp "$certs/ca/ca.crt" "$certs/auth/ca.crt"
+chmod 644 "$certs/auth/ca.crt"
+chmod 600 "$certs/auth/server.key"
+
+# Packaged Quarkus images run as UID 185. Dev containers run as root.
+if command -v setfacl >/dev/null; then
+  setfacl -m u:185:r "$certs/auth/server.key"
+else
+  printf 'Grant UID 185 read access to the Auth server key before running packaged images.\n' >&2
+fi
+printf 'Auth server certificates ready under %s/auth. No existing complete key pairs were replaced.\n' "$certs"
+printf 'Run setup-clientes.sh separately to prepare Auth client certificates and JWT keys.\n'
