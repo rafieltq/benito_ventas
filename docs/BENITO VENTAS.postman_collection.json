@@ -1,0 +1,1315 @@
+{
+  "info": {
+    "_postman_id": "8b4cbeda-c42d-4b09-ae02-e26e831b268f",
+    "name": "BENITO VENTAS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "10124036"
+  },
+  "item": [
+    {
+      "name": "CLIENTES",
+      "item": [
+        {
+          "name": "/clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{clientes_host}}/clientes/",
+              "host": [
+                "{{clientes_host}}"
+              ],
+              "path": [
+                "clientes",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/clientes",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{clientes_hostl}}/clientes/",
+              "host": [
+                "{{clientes_hostl}}"
+              ],
+              "path": [
+                "clientes",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/clientes",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{clientes_hostl}}/clientes/",
+              "host": [
+                "{{clientes_hostl}}"
+              ],
+              "path": [
+                "clientes",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/clientes",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{clientes_hostl}}/clientes",
+              "host": [
+                "{{clientes_hostl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "/clientes/signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Rafiel Taveras\",\n    \"email\": \"rafiel1200@hotmail.com\",\n    \"phone\": \"8094770243\",\n    \"password\": \"12345\",\n    \"confirmPassword\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_host}}/auth/clientes/signup",
+              "host": [
+                "{{auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "signup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/clientes/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"rafiel1200@hotmail.com\",\n    \"password\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_host}}/auth/clientes/login",
+              "host": [
+                "{{auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/admin/signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Rafiel Taveras\",\n    \"email\": \"taverasrafiel@gmail.com\",\n    \"phone\": \"8094770243\",\n    \"password\": \"12345\",\n    \"confirmPassword\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_host}}/auth/clientes/signup",
+              "host": [
+                "{{auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "signup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/admin/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@benitoventas.com\",\n    \"password\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_auth_host}}/auth/admin/login",
+              "host": [
+                "{{admin_auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "admin",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "FACTURACION",
+      "item": [
+        {
+          "name": "ORDENES",
+          "item": [
+            {
+              "name": "/ordenes",
+              "protocolProfileBehavior": {
+                "followOriginalHttpMethod": false,
+                "strictSSL": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/ordenes",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/ordenes/{id}",
+              "protocolProfileBehavior": {
+                "followOriginalHttpMethod": false,
+                "strictSSL": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/ordenes/6ae4087edb3f832e27799ae0",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "6ae4087edb3f832e27799ae0"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/ordenes",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    // \"clienteId\": \"507f1f77bcf86cd799439012\", // solo para uso admin, ignorado en cliente\n    \"items\": [\n        {\n            \"productoId\": \"507f1f77bcf86cd799439011\",\n            \"cantidad\": 2\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{facturacion_host}}/ordenes",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/ordenes",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"id\": \"6ae0174a5132f7824fa3509e\",\n    \"nombre\": \"Pan sobao bien bien\",\n    \"descripcion\": \"Pan sobao\",\n    \"precio\": \"10.75\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{facturacion_host}}/ordenes/6ae0174a5132f7824fa3509e",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "6ae0174a5132f7824fa3509e"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/ordenes",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/ordenes/6ae1ed319f592b8097549b67",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "6ae1ed319f592b8097549b67"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "CUENTAS",
+          "item": [
+            {
+              "name": "/cuentas",
+              "protocolProfileBehavior": {
+                "followOriginalHttpMethod": false,
+                "strictSSL": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/cuentas",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "cuentas"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/cuentas/{id}",
+              "protocolProfileBehavior": {
+                "followOriginalHttpMethod": false,
+                "strictSSL": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/cuentas",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "cuentas"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/cuentas",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"nombre\": \"Salami super especial\",\n    \"Descripcion\": \"Induveca\",\n    \"precio\": \"450.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{facturacion_host}}/cuentas",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "cuentas"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/cuentas",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"id\": \"6ae0174a5132f7824fa3509e\",\n    \"nombre\": \"Pan sobao bien bien\",\n    \"descripcion\": \"Pan sobao\",\n    \"precio\": \"10.75\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{facturacion_host}}/cuentas/6ae0174a5132f7824fa3509e",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "cuentas",
+                    "6ae0174a5132f7824fa3509e"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/cuentas",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/cuentas/6ae1ed319f592b8097549b67",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "cuentas",
+                    "6ae1ed319f592b8097549b67"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "DEPOSITOS",
+          "item": [
+            {
+              "name": "/depositos",
+              "protocolProfileBehavior": {
+                "followOriginalHttpMethod": false,
+                "strictSSL": false
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{admin_facturacion_host}}/depositos",
+                  "host": [
+                    "{{admin_facturacion_host}}"
+                  ],
+                  "path": [
+                    "depositos"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/depositos",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"referencia\": \"00000002\",\n    \"monto\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{facturacion_host}}/depositos",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "depositos"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/depositos/{id}/aprobar",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{admin_facturacion_host}}/depositos/6ae426f717f56c2ca168018e/aprobar",
+                  "host": [
+                    "{{admin_facturacion_host}}"
+                  ],
+                  "path": [
+                    "depositos",
+                    "6ae426f717f56c2ca168018e",
+                    "aprobar"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/depositos/{id}/rechazar",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"id\": \"6ae0174a5132f7824fa3509e\",\n    \"nombre\": \"Pan sobao bien bien\",\n    \"descripcion\": \"Pan sobao\",\n    \"precio\": \"10.75\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{admin_facturacion_host}}/depositos/6ae415f218ca883cafe29c6c/rechazar",
+                  "host": [
+                    "{{admin_facturacion_host}}"
+                  ],
+                  "path": [
+                    "depositos",
+                    "6ae415f218ca883cafe29c6c",
+                    "rechazar"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "/depositos",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{facturacion_host}}/depositos/6ae1ed319f592b8097549b67",
+                  "host": [
+                    "{{facturacion_host}}"
+                  ],
+                  "path": [
+                    "depositos",
+                    "6ae1ed319f592b8097549b67"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PRODUCTOS",
+      "item": [
+        {
+          "name": "/productos",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productos_host}}/productos",
+              "host": [
+                "{{productos_host}}"
+              ],
+              "path": [
+                "productos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/productos",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nombre\": \"Salami super especial\",\n    \"Descripcion\": \"Induveca\",\n    \"precio\": \"450.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{productos_host}}/productos",
+              "host": [
+                "{{productos_host}}"
+              ],
+              "path": [
+                "productos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/productos",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"6ae0174a5132f7824fa3509e\",\n    \"nombre\": \"Pan sobao bien bien\",\n    \"descripcion\": \"Pan sobao\",\n    \"precio\": \"20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_productos_host}}/productos/6ae0174a5132f7824fa3509e",
+              "host": [
+                "{{admin_productos_host}}"
+              ],
+              "path": [
+                "productos",
+                "6ae0174a5132f7824fa3509e"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/productos",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{productos_host}}/productos/6ae1ed319f592b8097549b67",
+              "host": [
+                "{{productos_host}}"
+              ],
+              "path": [
+                "productos",
+                "6ae1ed319f592b8097549b67"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "E2E Cliente",
+      "item": [
+        {
+          "name": "/clientes/signup 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Rafiel Taveras\",\n    \"email\": \"rafiel1200@hotmail.com\",\n    \"phone\": \"8094770243\",\n    \"password\": \"12345\",\n    \"confirmPassword\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_host}}/auth/clientes/signup",
+              "host": [
+                "{{auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "signup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/clientes/login 1.1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"rafiel1200@hotmail.com\",\n    \"password\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_host}}/auth/clientes/login",
+              "host": [
+                "{{auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/productos 2",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productos_host}}/productos",
+              "host": [
+                "{{productos_host}}"
+              ],
+              "path": [
+                "productos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"items\": [\n        {\n            \"productoId\": \"6ae0174a5132f7824fa3509e\",\n            \"cantidad\": 2\n        },\n        {\n            \"productoId\": \"6ae0337e9fcdc84c611f5b0e\",\n            \"cantidad\": 2\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{facturacion_host}}/ordenes",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3.1",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"items\": [\n        {\n            \"productoId\": \"6ae0174a5132f7824fa3509e\",\n            \"cantidad\": 200\n        },\n        {\n            \"productoId\": \"6ae0337e9fcdc84c611f5b0e\",\n            \"cantidad\": 2\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{facturacion_host}}/ordenes",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3.2",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{facturacion_host}}/ordenes",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/cuentas 4",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{facturacion_host}}/cuentas",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "cuentas"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E2E Admin",
+      "item": [
+        {
+          "name": "/admin/signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Rafiel Taveras\",\n    \"email\": \"20201292@gmail.com\",\n    \"phone\": \"8094770243\",\n    \"password\": \"12345\",\n    \"confirmPassword\": \"12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_auth_host}}/auth/clientes/signup",
+              "host": [
+                "{{admin_auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "clientes",
+                "signup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/admin/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = JSON.parse(responseBody);\nif(jsonData.token) {\n    pm.environment.set(\"token\", jsonData.token)\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@benitoventas.com\",\n    \"password\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_auth_host}}/auth/admin/login",
+              "host": [
+                "{{admin_auth_host}}"
+              ],
+              "path": [
+                "auth",
+                "admin",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/depositos 1",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{admin_facturacion_host}}/depositos",
+              "host": [
+                "{{admin_facturacion_host}}"
+              ],
+              "path": [
+                "depositos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/depositos/{id}/aprobar 1",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_facturacion_host}}/depositos/6ae426f717f56c2ca168018e/aprobar",
+              "host": [
+                "{{admin_facturacion_host}}"
+              ],
+              "path": [
+                "depositos",
+                "6ae426f717f56c2ca168018e",
+                "aprobar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/depositos/{id}/rechazar 1.2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"6ae0174a5132f7824fa3509e\",\n    \"nombre\": \"Pan sobao bien bien\",\n    \"descripcion\": \"Pan sobao\",\n    \"precio\": \"10.75\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_facturacion_host}}/depositos/6ae415f218ca883cafe29c6c/rechazar",
+              "host": [
+                "{{admin_facturacion_host}}"
+              ],
+              "path": [
+                "depositos",
+                "6ae415f218ca883cafe29c6c",
+                "rechazar"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/productos 2",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{admin_productos_host}}/productos",
+              "host": [
+                "{{admin_productos_host}}"
+              ],
+              "path": [
+                "productos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clienteId\": \"6ae3d55daf0188733079d98e\",\n    \"items\": [\n        {\n            \"productoId\": \"6ae0174a5132f7824fa3509e\",\n            \"cantidad\": 2\n        },\n        {\n            \"productoId\": \"6ae0337e9fcdc84c611f5b0e\",\n            \"cantidad\": 2\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{admin_facturacion_host}}/ordenes",
+              "host": [
+                "{{admin_facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3.1",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clienteId\": \"6ae3d55daf0188733079d98e\",\n    \"items\": [\n        {\n            \"productoId\": \"6ae0174a5132f7824fa3509e\",\n            \"cantidad\": 200\n        },\n        {\n            \"productoId\": \"6ae0337e9fcdc84c611f5b0e\",\n            \"cantidad\": 2\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{facturacion_host}}/ordenes",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/ordenes 3.2",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{facturacion_host}}/ordenes",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/cuentas 4",
+          "protocolProfileBehavior": {
+            "followOriginalHttpMethod": false,
+            "strictSSL": false
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{facturacion_host}}/cuentas",
+              "host": [
+                "{{facturacion_host}}"
+              ],
+              "path": [
+                "cuentas"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
