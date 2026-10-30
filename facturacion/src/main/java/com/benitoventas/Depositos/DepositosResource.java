@@ -3,24 +3,23 @@ package com.benitoventas.Depositos;
 import java.net.URI;
 import java.util.List;
 
-import org.bson.types.ObjectId;
 import org.jboss.logging.Logger;
 
+import com.benitoventas.Depositos.dto.CrearDepositoRequest;
 import com.benitoventas.Depositos.mongodb.panache.entity.Deposito;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
 
-import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -30,106 +29,86 @@ import jakarta.ws.rs.core.Response;
 public class DepositosResource {
     private static final Logger LOG = Logger.getLogger(DepositosResource.class);
 
+    @Inject
+    DepositosService depositosService;
+
     public record ListadoDepositosResponse(String mensaje, List<Deposito> depositos) {}
     public record MensajeResponse(String mensaje) {}
 
     @GET
-    @PermitAll
+    @RolesAllowed({"Admin", "cliente"})
     public Response Listar() {
         try {
-            List<Deposito> depositos = Deposito.listAll();
+            List<Deposito> depositos = depositosService.listar();
             String mensaje = depositos.isEmpty()
                     ? "No se encontraron depósitos."
                     : "Listado de depósitos obtenido exitosamente.";
             return Response.ok(new ListadoDepositosResponse(mensaje, depositos)).build();
-        } catch (MongoException e) {
-            return errorMongo(e);
+        } catch (RuntimeException e) {
+            return error(e);
         }
     }
 
     @GET
     @Path("/{id}")
-    @PermitAll
+    @RolesAllowed({"Admin", "cliente"})
     public Response Obtener(@PathParam("id") String id) {
-        if (id == null || !ObjectId.isValid(id)) {
-            return mensaje(Response.Status.BAD_REQUEST, "ID de depósito inválido.");
-        }
         try {
-            Deposito deposito = Deposito.findById(new ObjectId(id));
-            if (deposito == null) {
-                return mensaje(Response.Status.NOT_FOUND, "Depósito no encontrado.");
-            }
-            return Response.ok(deposito).build();
-        } catch (MongoException e) {
-            return errorMongo(e);
+            return Response.ok(depositosService.obtener(id)).build();
+        } catch (RuntimeException e) {
+            return error(e);
         }
     }
 
     @POST
-    @RolesAllowed("Admin")
-    public Response Crear(Deposito deposito) {
-        if (deposito == null) {
-            return mensaje(Response.Status.BAD_REQUEST, "Debe enviar un depósito.");
-        }
+    @RolesAllowed("cliente")
+    public Response Crear(CrearDepositoRequest solicitud) {
         try {
-            deposito.persist();
+            Deposito deposito = depositosService.crear(solicitud);
             return Response.created(URI.create("/depositos/" + deposito.id)).entity(deposito).build();
-        } catch (MongoException e) {
-            return errorMongo(e);
+        } catch (RuntimeException e) {
+            return error(e);
         }
     }
 
-    @PUT
-    @Path("/{id}")
+    @POST
+    @Path("/{id}/aprobar")
     @RolesAllowed("Admin")
-    public Response Actualizar(@PathParam("id") String id, Deposito deposito) {
-        if (id == null || !ObjectId.isValid(id)) {
-            return mensaje(Response.Status.BAD_REQUEST, "ID de depósito inválido.");
-        }
-        if (deposito == null) {
-            return mensaje(Response.Status.BAD_REQUEST, "Debe enviar un depósito.");
-        }
+    public Response Aprobar(@PathParam("id") String id) {
         try {
-            ObjectId depositoId = new ObjectId(id);
-            Deposito existente = Deposito.findById(depositoId);
-            if (existente == null) {
-                return mensaje(Response.Status.NOT_FOUND, "Depósito no encontrado.");
-            }
-            deposito.id = depositoId;
-            deposito.update();
-            return Response.ok(deposito).build();
-        } catch (MongoException e) {
-            return errorMongo(e);
+            return Response.ok(depositosService.aprobar(id)).build();
+        } catch (RuntimeException e) {
+            return error(e);
         }
     }
 
-    @DELETE
-    @Path("/{id}")
+    @POST
+    @Path("/{id}/rechazar")
     @RolesAllowed("Admin")
-    public Response Eliminar(@PathParam("id") String id) {
-        if (id == null || !ObjectId.isValid(id)) {
-            return mensaje(Response.Status.BAD_REQUEST, "ID de depósito inválido.");
-        }
+    public Response Rechazar(@PathParam("id") String id) {
         try {
-            if (!Deposito.deleteById(new ObjectId(id))) {
-                return mensaje(Response.Status.NOT_FOUND, "Depósito no encontrado.");
+            return Response.ok(depositosService.rechazar(id)).build();
+        } catch (RuntimeException e) {
+            return error(e);
+        }
+    }
+
+    private Response error(RuntimeException error) {
+        for (Throwable causa = error; causa != null; causa = causa.getCause()) {
+            if (causa instanceof WebApplicationException web) {
+                return Response.status(web.getResponse().getStatus())
+                        .entity(new MensajeResponse(web.getMessage())).build();
             }
-            return Response.noContent().build();
-        } catch (MongoException e) {
-            return errorMongo(e);
+            if (causa instanceof MongoException mongo && (mongo.getCode() == 11000
+                    || (mongo instanceof MongoWriteException escritura
+                        && escritura.getError().getCategory() == ErrorCategory.DUPLICATE_KEY))) {
+                return Response.status(Response.Status.CONFLICT)
+                        .entity(new MensajeResponse("La referencia bancaria ya respalda un depósito aprobado."))
+                        .build();
+            }
         }
-    }
-
-    private Response errorMongo(MongoException e) {
-        if (e instanceof MongoWriteException writeException
-                && writeException.getError().getCategory() == ErrorCategory.DUPLICATE_KEY) {
-            return mensaje(Response.Status.CONFLICT, "El depósito ya existe.");
-        }
-        LOG.error("Error de MongoDB al operar sobre depósitos.", e);
-        return mensaje(Response.Status.INTERNAL_SERVER_ERROR, "Error interno del servidor.");
-    }
-
-    private Response mensaje(Response.Status estado, String mensaje) {
-        return Response.status(estado).entity(new MensajeResponse(mensaje)).build();
+        LOG.error("Error al operar sobre depósitos.", error);
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new MensajeResponse("Error interno del servidor.")).build();
     }
 }

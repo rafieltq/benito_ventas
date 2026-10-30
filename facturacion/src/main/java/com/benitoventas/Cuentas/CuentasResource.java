@@ -22,7 +22,6 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -120,34 +119,6 @@ public class CuentasResource {
                 return Response.ok(existente).build();
             }
             return Response.created(URI.create("/cuentas/" + cuenta.id)).entity(cuenta).build();
-        } catch (MongoException e) {
-            return errorMongo(e);
-        }
-    }
-
-    @PUT
-    @Path("/{id}")
-    @RolesAllowed("Admin")
-    public Response Actualizar(@PathParam("id") String id, Cuenta cuenta) {
-        if (id == null || !ObjectId.isValid(id)) {
-            return mensaje(Response.Status.BAD_REQUEST, "ID de cuenta inválido.");
-        }
-        if (cuenta == null) {
-            return mensaje(Response.Status.BAD_REQUEST, "Debe enviar una cuenta.");
-        }
-        try {
-            ObjectId cuentaId = new ObjectId(id);
-            Cuenta existente = Cuenta.findById(cuentaId);
-            if (existente == null) {
-                return mensaje(Response.Status.NOT_FOUND, "Cuenta no encontrada.");
-            }
-            if (cuenta.getClienteId() != null && !cuenta.getClienteId().equals(existente.getClienteId())) {
-                return mensaje(Response.Status.BAD_REQUEST, "No se puede cambiar el cliente de una cuenta.");
-            }
-            cuenta.id = cuentaId;
-            cuenta.setClienteId(existente.getClienteId());
-            cuenta.update();
-            return Response.ok(cuenta).build();
         } catch (MongoException e) {
             return errorMongo(e);
         }
