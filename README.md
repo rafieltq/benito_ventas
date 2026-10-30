@@ -146,11 +146,13 @@ Todos los endpoints y flujos e2e de peticiones se encuentran en
 ./docs/BENITO VENTAS.postman_collection.json
 ```
 ### Para utilizar se deben agregar los certificados:
-placeholder para imagen
-Para utilizar la colección de Postman necestia cargar los certificados
-Dirigirse a: File > Settings > Certificate
-local.crt para la certificación de la comunicación TLS, en el folder de certs. ~/certs/traefik/local.crt
-Para certificación mTLS para Administrador al gateway.
-HOST: <servicio>.admin.benito.localhost Puerto: 443
-~/certs/admin/operador.crt
-~/certs/admin/operador.key
+<img width="703" height="607" alt="image" src="https://github.com/user-attachments/assets/a9fdeba7-fcbd-41a7-a825-f109f2212e09" />
+
+
+#### Para utilizar la colección de Postman necestia cargar los certificados
+1. Dirigirse a: File > Settings > Certificate
+2. Cargar local.crt para la certificación de la comunicación TLS, en el folder de certs. ~/certs/traefik/local.crt
+#### Para certificación mTLS para Administrador al gateway
+- HOST: <servicio>.admin.benito.localhost Puerto: 443
+- ~/certs/admin/operador.crt
+- ~/certs/admin/operador.key
