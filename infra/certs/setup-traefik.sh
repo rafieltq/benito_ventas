@@ -76,6 +76,8 @@ issue_certificate() {
 issue_certificate client traefik clientAuth DNS:traefik
 # This separate public certificate is also reused by setup-clientes.sh.
 issue_certificate clientes-local clientes.benito.localhost serverAuth DNS:clientes.benito.localhost
+issue_certificate admin-local admin.benito.localhost serverAuth DNS:admin.benito.localhost
+
 cp "$certs/ca/ca.crt" "$certs/traefik/ca.crt"
 chmod 644 "$certs/traefik/ca.crt"
 chmod 600 "$certs/traefik/local.key" "$certs/traefik/client.key" "$certs/traefik/clientes-local.key"

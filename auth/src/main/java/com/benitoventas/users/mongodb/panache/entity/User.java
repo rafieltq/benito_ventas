@@ -18,5 +18,5 @@ public class User extends PanacheMongoEntity {
     public String phone;
     public Set<ObjectId> roleIds = new HashSet<>();
     public Boolean isActive = false;
-    public ObjectId clientId;
+    public ObjectId clienteId;
 }

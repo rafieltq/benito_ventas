@@ -73,7 +73,7 @@ public class OrdenesResource {
 
     @GET
     @Path("/{id}")
-    @PermitAll
+    @RolesAllowed({"Admin", "cliente"})
     public Response Obtener(@PathParam("id") String id) {
         if (id == null || !ObjectId.isValid(id)) {
             return mensaje(Response.Status.BAD_REQUEST, "ID de orden inválido.");

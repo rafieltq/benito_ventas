@@ -183,7 +183,7 @@ public class AuthResource {
                     Log.warn("Clientes devolvió una referencia de cliente inválida.");
                     return pendingSignup();
                 }
-                user.clientId = new ObjectId(cliente.id());
+                user.clienteId = new ObjectId(cliente.id());
             }
         } catch (ProcessingException | WebApplicationException exception) {
             Log.warnf("No se pudo contactar a Clientes para completar el registro del usuario %s", user.id);
@@ -192,25 +192,25 @@ public class AuthResource {
         try {
             String serviceToken = Jwt.issuer(issuer)
                     .subject(user.id.toHexString())
-                    .claim("clienteId", user.clientId.toHexString())
+                    .claim("clienteId", user.clienteId.toHexString())
                     .groups(Set.of("auth-service"))
                     .expiresIn(60)
                     .sign();
             try (Response result = cuentas.create(
-                    new CuentasClient.CuentaPayload(user.clientId.toHexString()), "Bearer " + serviceToken)) {
+                    new CuentasClient.CuentaPayload(user.clienteId.toHexString()), "Bearer " + serviceToken)) {
                 if (result.getStatus() != Status.OK.getStatusCode() && result.getStatus() != Status.CREATED.getStatusCode()) {
-                    Log.warnf("Facturación rechazó crear la cuenta del cliente %s: HTTP %d", user.clientId, result.getStatus());
+                    Log.warnf("Facturación rechazó crear la cuenta del cliente %s: HTTP %d", user.clienteId, result.getStatus());
                     return pendingSignup();
                 }
                 CuentasClient.CuentaResponse cuenta = result.readEntity(CuentasClient.CuentaResponse.class);
                 if (cuenta == null || cuenta.id() == null || !ObjectId.isValid(cuenta.id())
-                        || !user.clientId.toHexString().equals(cuenta.clienteId())) {
+                        || !user.clienteId.toHexString().equals(cuenta.clienteId())) {
                     Log.warn("Facturación devolvió una referencia de cuenta inválida.");
                     return pendingSignup();
                 }
             }
         } catch (ProcessingException | WebApplicationException exception) {
-            Log.warnf("No se pudo contactar a Facturación para crear la cuenta del cliente %s", user.clientId);
+            Log.warnf("No se pudo contactar a Facturación para crear la cuenta del cliente %s", user.clienteId);
             return pendingSignup();
         }
         // Retries recover the existing client and account if signing or activation fails.
@@ -283,7 +283,7 @@ public class AuthResource {
         return Jwt.issuer(issuer)
                 .subject(user.id.toHexString())
                 .upn(user.email)
-                .claim("clienteId", user.clientId != null ? user.clientId.toHexString() : null)
+                .claim("clienteId", user.clienteId != null ? user.clienteId.toHexString() : null)
                 .groups(roleNames(user))
                 .expiresIn(3600)
                 .sign();
