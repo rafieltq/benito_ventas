@@ -48,10 +48,18 @@ public class CuentasResource {
     }
 
     @GET
-    @RolesAllowed({"Admin", "auth-service"})
+    @RolesAllowed({"Admin", "auth-service", "cliente"})
     public Response Listar() {
+        ObjectId clienteId = null;
+        if (!jwt.getGroups().contains("Admin") && !jwt.getGroups().contains("auth-service")) {
+            Object claim = jwt.getClaim("clienteId");
+            if (!(claim instanceof String id) || !ObjectId.isValid(id)) {
+                return mensaje(Response.Status.FORBIDDEN, "La sesión no tiene un clienteId válido.");
+            }
+            clienteId = new ObjectId(id);
+        }
         try {
-            List<Cuenta> cuentas = Cuenta.listAll();
+            List<Cuenta> cuentas = clienteId == null ? Cuenta.listAll() : Cuenta.list("clienteId", clienteId);
             String mensaje = cuentas.isEmpty()
                     ? "No se encontraron cuentas."
                     : "Listado de cuentas obtenido exitosamente.";
